@@ -1,0 +1,269 @@
+/* ═══════════════════════════════════════════════════════════════════
+   GLOBAL SUPPLY CHAIN PLATFORM — guest.css
+   Design System: Dark command-center · Teal/cyan · Syne + DM Sans
+   ═══════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+/* ── Shared tokens ──────────────────────────────────────────────── */
+:root {
+  --bg-deep:        #030712;
+  --bg-mid:         #0d1117;
+  --bg-card:        rgba(255, 255, 255, 0.04);
+  --bg-card-hover:  rgba(255, 255, 255, 0.07);
+  --border:         rgba(255, 255, 255, 0.08);
+  --border-bright:  rgba(56, 189, 248, 0.35);
+  --accent-cyan:    #22d3ee;
+  --accent-teal:    #14b8a6;
+  --accent-purple:  #818cf8;
+  --accent-amber:   #fbbf24;
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted:     #475569;
+  --glow-cyan:      0 0 40px rgba(34, 211, 238, 0.25);
+  --glow-teal:      0 0 40px rgba(20, 184, 166, 0.2);
+  --error:          #f87171;
+  --error-bg:       rgba(248, 113, 113, 0.08);
+  --error-border:   rgba(248, 113, 113, 0.22);
+  --radius-panel:   20px;
+  --radius-input:   10px;
+  --radius-btn:     10px;
+  --font-display:   'Syne', sans-serif;
+  --font-body:      'DM Sans', sans-serif;
+  --t-snap:         0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --t-mid:          0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  --t-spring:       0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --t-smooth:       0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+button { appearance: none; cursor: pointer; }
+
+/* ── Scene ──────────────────────────────────────────────────────── */
+.auth-scene.auth-guest-theme {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px 20px;
+  background: var(--bg-deep);
+  font-family: var(--font-body);
+  position: relative; overflow: hidden;
+}
+
+/* Mesh background — teal dominant to subtly distinguish from signup */
+.auth-scene.auth-guest-theme::before {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 85% 15%, rgba(20,184,166,.12) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 50% at 10% 90%, rgba(34,211,238,.08) 0%, transparent 55%);
+  pointer-events: none; z-index: 0;
+}
+.auth-scene.auth-guest-theme::after {
+  content: ''; position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(56,189,248,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56,189,248,.04) 1px, transparent 1px);
+  background-size: 80px 80px;
+  pointer-events: none; z-index: 0;
+}
+
+/* ── Panel ──────────────────────────────────────────────────────── */
+.auth-panel.auth-guest-panel.guest-form {
+  background: rgba(13,17,23,.90);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border-radius: var(--radius-panel);
+  padding: 52px 48px;
+  max-width: 480px; width: 100%;
+  border: 1px solid var(--border);
+  box-shadow:
+    0 0 0 1px rgba(56,189,248,.06) inset,
+    0 32px 64px rgba(0,0,0,.65),
+    inset 0 1px 0 rgba(255,255,255,.06);
+  position: relative; z-index: 1;
+  animation: revealUp .8s cubic-bezier(.16,1,.3,1) both;
+  overflow: hidden;
+}
+
+/* Top-right teal corner (inverted vs signup) */
+.auth-guest-panel::before {
+  content: ''; position: absolute; top: 0; right: 0;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle at 100% 0, rgba(20,184,166,.1), transparent 70%);
+  pointer-events: none;
+}
+/* Bottom-left cyan corner */
+.auth-guest-panel::after {
+  content: ''; position: absolute; bottom: 0; left: 0;
+  width: 260px; height: 260px;
+  background: radial-gradient(circle at 0 100%, rgba(34,211,238,.06), transparent 70%);
+  pointer-events: none;
+}
+
+@keyframes revealUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Header / Icon Area ─────────────────────────────────────────── */
+.auth-guest-panel .auth-header {
+  text-align: center; margin-bottom: 36px;
+  animation: fieldIn .5s .05s cubic-bezier(.16,1,.3,1) both;
+}
+
+.auth-guest-panel .guest-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 60px; height: 60px;
+  background: linear-gradient(135deg, #0e7490 0%, #0891b2 50%, #14b8a6 100%);
+  color: white; border-radius: 16px;
+  font-family: var(--font-display); font-size: 26px; font-weight: 800;
+  margin-bottom: 20px;
+  box-shadow: 0 6px 20px rgba(6,182,212,.35), 0 0 0 4px rgba(34,211,238,.1);
+  animation: iconBounce .6s .15s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes iconBounce{from{opacity:0;transform:scale(.5) rotate(-10deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+
+/* ── Titles ─────────────────────────────────────────────────────── */
+.auth-guest-panel .auth-panel-title {
+  font-family: var(--font-display);
+  font-size: 36px; font-weight: 800; letter-spacing: -.02em; line-height: 1.1;
+  margin: 0 0 10px 0; text-align: center;
+  background: linear-gradient(135deg,#f1f5f9 0%,var(--accent-teal) 45%,var(--accent-cyan) 80%,#f1f5f9 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  animation: gradShift 4s ease infinite;
+}
+@keyframes gradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+.auth-guest-panel .auth-panel-subtitle {
+  font-family: var(--font-body); font-size: 15px; font-weight: 400;
+  color: var(--text-secondary); text-align: center;
+  margin: 0; line-height: 1.65;
+}
+
+/* ── Field Group ────────────────────────────────────────────────── */
+.auth-guest-panel .auth-field-group {
+  margin-bottom: 20px;
+  animation: fieldIn .5s cubic-bezier(.16,1,.3,1) both;
+}
+.auth-guest-panel .auth-field-group:nth-child(1){animation-delay:.1s}
+.auth-guest-panel .auth-field-group:nth-child(2){animation-delay:.16s}
+.auth-guest-panel .auth-field-group:nth-child(3){animation-delay:.22s}
+.auth-guest-panel .auth-field-group:nth-child(4){animation-delay:.28s}
+@keyframes fieldIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Label ──────────────────────────────────────────────────────── */
+.auth-guest-panel .auth-field-label {
+  display: block;
+  font-family: var(--font-body); font-size: 12px; font-weight: 600;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text-secondary); margin-bottom: 8px;
+}
+
+/* ── Input ──────────────────────────────────────────────────────── */
+.auth-guest-panel .auth-field-input {
+  width: 100%; padding: 13px 16px;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+  font-family: var(--font-body); font-size: 15px; font-weight: 400;
+  color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.03);
+  outline: none; caret-color: var(--accent-teal);
+  transition: background var(--t-snap), border-color var(--t-snap), box-shadow var(--t-mid);
+}
+.auth-guest-panel .auth-field-input::placeholder { color: var(--text-muted); font-weight: 300; }
+.auth-guest-panel .auth-field-input:hover {
+  background: var(--bg-card-hover); border-color: rgba(255,255,255,.14);
+}
+.auth-guest-panel .auth-field-input:focus {
+  background: rgba(20,184,166,.05);
+  border-color: rgba(20,184,166,.45);
+  box-shadow: 0 0 0 3px rgba(20,184,166,.12), 0 2px 8px rgba(0,0,0,.25);
+}
+@media(max-width:640px){.auth-guest-panel .auth-field-input{font-size:16px}}
+
+/* ── Error Box ──────────────────────────────────────────────────── */
+.auth-guest-panel .auth-error-box {
+  background: var(--error-bg); border: 1px solid var(--error-border);
+  color: #fca5a5; padding: 12px 16px; border-radius: 9px;
+  font-size: 13px; font-weight: 400; margin-bottom: 18px;
+  display: flex; align-items: flex-start; gap: 9px; line-height: 1.5;
+  animation: shake .35s ease-out;
+}
+.auth-guest-panel .auth-error-box::before { content: '⚠'; font-size: 14px; flex-shrink: 0; color: var(--error); }
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+
+/* ── Actions ────────────────────────────────────────────────────── */
+.auth-guest-panel .auth-actions { display: flex; flex-direction: column; gap: 12px; margin-top: 28px; }
+
+/* ── Primary Button — teal variant (vs cyan in signup) ─────────── */
+.auth-guest-panel .auth-btn-primary {
+  position: relative; overflow: hidden;
+  width: 100%; padding: 14px 24px;
+  background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
+  color: white; border: none; border-radius: var(--radius-btn);
+  font-family: var(--font-body); font-size: 15px; font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(20,184,166,.35), inset 0 1px 0 rgba(255,255,255,.15);
+  transition: transform var(--t-spring), box-shadow var(--t-smooth);
+  animation: fieldIn .5s .34s cubic-bezier(.16,1,.3,1) both;
+}
+.auth-guest-panel .auth-btn-primary::after {
+  content: ''; position: absolute; top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent);
+  transition: left .45s ease;
+}
+.auth-guest-panel .auth-btn-primary:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 32px rgba(20,184,166,.5), inset 0 1px 0 rgba(255,255,255,.2);
+}
+.auth-guest-panel .auth-btn-primary:hover:not(:disabled)::after { left: 100%; }
+.auth-guest-panel .auth-btn-primary:active:not(:disabled) { transform: translateY(0) scale(.98); }
+.auth-guest-panel .auth-btn-primary:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ── Ghost Button ───────────────────────────────────────────────── */
+.auth-guest-panel .auth-btn-ghost {
+  width: 100%; padding: 13px 24px;
+  background: transparent; color: var(--text-secondary);
+  border: 1px solid var(--border); border-radius: var(--radius-btn);
+  font-family: var(--font-body); font-size: 15px; font-weight: 500;
+  cursor: pointer; transition: all var(--t-mid);
+  animation: fieldIn .5s .41s cubic-bezier(.16,1,.3,1) both;
+}
+.auth-guest-panel .auth-btn-ghost:hover:not(:disabled) {
+  background: var(--bg-card-hover); border-color: rgba(255,255,255,.18);
+  color: var(--text-primary); transform: translateY(-2px);
+}
+.auth-guest-panel .auth-btn-ghost:disabled { opacity: .35; cursor: not-allowed; }
+
+/* ── Info Banner — matches homepage guest-mode-banner ───────────── */
+.auth-guest-panel .info-banner {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 18px 20px; margin-top: 22px;
+  background: rgba(251,191,36,.07);
+  border: 1px solid rgba(251,191,36,.3);
+  border-radius: 14px;
+  font-family: var(--font-body);
+  animation: fieldIn .5s .48s cubic-bezier(.16,1,.3,1) both;
+}
+.auth-guest-panel .info-banner span:first-child {
+  font-family: var(--font-display); font-size: 11px; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--accent-amber);
+  background: rgba(251,191,36,.1); border: 1px solid rgba(251,191,36,.25);
+  padding: 3px 9px; border-radius: 6px; flex-shrink: 0; margin-top: 2px;
+}
+.auth-guest-panel .info-banner span:last-child {
+  font-size: 13px; font-weight: 400; color: var(--text-secondary); line-height: 1.6;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+@media(max-width:640px){
+  .auth-panel.auth-guest-panel.guest-form{padding:38px 26px}
+  .auth-guest-panel .auth-panel-title{font-size:28px}
+  .auth-guest-panel .guest-icon{width:52px;height:52px;font-size:22px}
+}
+@media(max-width:380px){.auth-panel.auth-guest-panel.guest-form{padding:30px 18px}}
+
+/* Focus */
+.auth-guest-panel .auth-field-input:focus-visible{outline:2px solid var(--accent-teal);outline-offset:2px}
+.auth-guest-panel .auth-btn-primary:focus-visible,
+.auth-guest-panel .auth-btn-ghost:focus-visible{outline:2px solid var(--accent-teal);outline-offset:3px}
+
+/* Reduced motion */
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}

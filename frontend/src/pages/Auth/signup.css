@@ -1,0 +1,873 @@
+/* ================================================================
+   SIGNUP.CSS — DEEP SPACE · PLASMA ELECTRIC THEME
+   Fonts: Bebas Neue (display) + DM Sans (body)
+   Palette: Void black · Electric cyan · Violet plasma · Neon white
+   ================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
+
+/* ================================================================
+   DESIGN TOKENS
+   ================================================================ */
+
+:root {
+  /* Backgrounds */
+  --su-bg-void:          #020408;
+  --su-bg-surface:       rgba(0, 240, 255, 0.028);
+  --su-bg-surface-alt:   rgba(0, 240, 255, 0.055);
+  --su-bg-input:         rgba(0, 220, 255, 0.045);
+  --su-bg-input-focus:   rgba(0, 220, 255, 0.08);
+
+  /* Cyan plasma accent */
+  --su-cyan:             #00f0ff;
+  --su-cyan-mid:         #00c8d7;
+  --su-cyan-dim:         rgba(0, 240, 255, 0.35);
+  --su-cyan-glow:        rgba(0, 240, 255, 0.16);
+  --su-cyan-border:      rgba(0, 240, 255, 0.38);
+
+  /* Violet accent */
+  --su-violet:           #b44fff;
+  --su-violet-dim:       rgba(180, 79, 255, 0.3);
+  --su-violet-glow:      rgba(180, 79, 255, 0.14);
+
+  /* Semantic */
+  --su-success:          #00f5a0;
+  --su-success-bg:       rgba(0, 245, 160, 0.08);
+  --su-success-border:   rgba(0, 245, 160, 0.22);
+  --su-error:            #ff4d6d;
+  --su-error-bg:         rgba(255, 77, 109, 0.09);
+  --su-error-border:     rgba(255, 77, 109, 0.28);
+
+  /* Text */
+  --su-text-bright:      #e8f4ff;
+  --su-text-mid:         rgba(180, 215, 240, 0.65);
+  --su-text-dim:         rgba(130, 170, 200, 0.4);
+  --su-text-label:       rgba(0, 240, 255, 0.7);
+
+  /* Borders */
+  --su-border-faint:     rgba(0, 240, 255, 0.07);
+  --su-border-mid:       rgba(0, 240, 255, 0.15);
+
+  /* Geometry */
+  --su-radius-panel:     24px;
+  --su-radius-input:     10px;
+  --su-radius-btn:       10px;
+  --su-radius-otp:       12px;
+
+  /* Shadows */
+  --su-shadow-panel:
+    0 0 0 1px rgba(0, 240, 255, 0.07) inset,
+    0 40px 100px rgba(0, 0, 0, 0.85),
+    0 0 80px rgba(0, 240, 255, 0.04);
+  --su-shadow-input:
+    0 2px 12px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(0, 240, 255, 0.04) inset;
+  --su-shadow-btn:
+    0 0 24px rgba(0, 240, 255, 0.22),
+    0 4px 16px rgba(0, 0, 0, 0.5);
+
+  /* Transitions */
+  --su-t-snap:    0.16s cubic-bezier(0.4, 0, 0.2, 1);
+  --su-t-mid:     0.26s cubic-bezier(0.4, 0, 0.2, 1);
+  --su-t-spring:  0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --su-t-smooth:  0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+
+  /* Fonts */
+  --su-font-display:  'Bebas Neue', sans-serif;
+  --su-font-body:     'DM Sans', sans-serif;
+}
+
+/* ================================================================
+   SCENE
+   ================================================================ */
+
+main.auth-scene.auth-signup-theme {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: var(--su-bg-void);
+  font-family: var(--su-font-body);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Aurora mesh background */
+.auth-scene.auth-signup-theme::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 55% 45% at 15% 20%, rgba(0, 240, 255, 0.09) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 55% at 88% 80%, rgba(180, 79, 255, 0.1) 0%, transparent 55%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(0, 15, 30, 0.95) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scanline texture */
+.auth-scene.auth-signup-theme::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 240, 255, 0.012) 2px,
+    rgba(0, 240, 255, 0.012) 4px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ================================================================
+   PANEL
+   ================================================================ */
+
+.auth-panel.auth-signup-panel {
+  background: var(--su-bg-surface);
+  backdrop-filter: blur(40px) saturate(1.6);
+  -webkit-backdrop-filter: blur(40px) saturate(1.6);
+  border-radius: var(--su-radius-panel);
+  padding: 52px 44px;
+  max-width: 460px;
+  width: 100%;
+  box-shadow: var(--su-shadow-panel);
+  border: 1px solid var(--su-border-faint);
+  position: relative;
+  z-index: 1;
+  animation: suPanelIn 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  overflow: hidden;
+}
+
+/* Glowing top edge */
+.auth-signup-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 10%; right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent,
+    var(--su-cyan-mid),
+    var(--su-cyan),
+    var(--su-cyan-mid),
+    transparent
+  );
+  box-shadow: 0 0 20px var(--su-cyan);
+  opacity: 0.6;
+}
+
+/* Corner violet bloom */
+.auth-signup-panel::after {
+  content: '';
+  position: absolute;
+  bottom: -80px; right: -80px;
+  width: 220px; height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--su-violet-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+@keyframes suPanelIn {
+  from { opacity: 0; transform: translateY(32px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ================================================================
+   TITLES
+   ================================================================ */
+
+.auth-signup-panel .auth-panel-title {
+  font-family: var(--su-font-display);
+  font-size: 44px;
+  font-weight: 400; /* Bebas Neue is always bold, 400 = correct */
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--su-text-bright);
+  margin: 0 0 10px 0;
+  text-align: center;
+  line-height: 1;
+
+  /* Cyan plasma shimmer */
+  background: linear-gradient(100deg, #e8f4ff 20%, var(--su-cyan) 50%, var(--su-violet) 75%, #e8f4ff 100%);
+  background-size: 250% 250%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: suTitlePulse 6s ease-in-out infinite;
+}
+
+@keyframes suTitlePulse {
+  0%, 100% { background-position: 0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+.auth-signup-panel .auth-panel-subtitle {
+  font-family: var(--su-font-body);
+  font-size: 13.5px;
+  font-weight: 300;
+  font-style: italic;
+  color: var(--su-text-dim);
+  text-align: center;
+  margin: 0 0 36px 0;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+}
+
+/* ================================================================
+   FIELD GROUP
+   ================================================================ */
+
+.auth-signup-panel .auth-field-group {
+  margin-bottom: 20px;
+  animation: suFieldIn 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.auth-signup-panel .auth-field-group:nth-child(1) { animation-delay: 0.1s; }
+.auth-signup-panel .auth-field-group:nth-child(2) { animation-delay: 0.17s; }
+.auth-signup-panel .auth-field-group:nth-child(3) { animation-delay: 0.24s; }
+.auth-signup-panel .auth-field-group:nth-child(4) { animation-delay: 0.31s; }
+.auth-signup-panel .auth-field-group:nth-child(5) { animation-delay: 0.38s; }
+
+@keyframes suFieldIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ================================================================
+   LABELS
+   ================================================================ */
+
+.auth-signup-panel .auth-field-label {
+  display: block;
+  font-family: var(--su-font-display);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--su-text-label);
+  margin-bottom: 9px;
+}
+
+/* ================================================================
+   INPUTS
+   ================================================================ */
+
+.auth-signup-panel .auth-field-input {
+  width: 100%;
+  padding: 13px 16px;
+  background: var(--su-bg-input);
+  border: 1px solid var(--su-border-faint);
+  border-radius: var(--su-radius-input);
+  font-family: var(--su-font-body);
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--su-text-bright);
+  box-shadow: var(--su-shadow-input);
+  outline: none;
+  transition:
+    background var(--su-t-snap),
+    border-color var(--su-t-snap),
+    box-shadow var(--su-t-mid);
+  caret-color: var(--su-cyan);
+}
+
+.auth-signup-panel .auth-field-input::placeholder {
+  color: var(--su-text-dim);
+  font-weight: 300;
+}
+
+.auth-signup-panel .auth-field-input:hover {
+  background: rgba(0, 240, 255, 0.06);
+  border-color: rgba(0, 240, 255, 0.14);
+}
+
+.auth-signup-panel .auth-field-input:focus {
+  background: var(--su-bg-input-focus);
+  border-color: var(--su-cyan-border);
+  box-shadow:
+    0 0 0 3px var(--su-cyan-glow),
+    0 0 16px rgba(0, 240, 255, 0.1),
+    var(--su-shadow-input);
+}
+
+/* ================================================================
+   PASSWORD TOGGLE
+   ================================================================ */
+
+.auth-signup-panel .auth-password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth-signup-panel .auth-password-wrapper .auth-field-input {
+  padding-right: 80px;
+  flex: 1;
+}
+
+.auth-signup-panel .auth-password-toggle {
+  position: absolute;
+  right: 12px;
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid var(--su-border-faint);
+  border-radius: 6px;
+  font-family: var(--su-font-display);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--su-cyan-mid);
+  cursor: pointer;
+  padding: 4px 9px;
+  transition: all var(--su-t-snap);
+  line-height: 1.4;
+}
+
+.auth-signup-panel .auth-password-toggle:hover {
+  background: rgba(0, 240, 255, 0.14);
+  border-color: var(--su-cyan-border);
+  color: var(--su-cyan);
+  box-shadow: 0 0 10px var(--su-cyan-glow);
+}
+
+/* ================================================================
+   PASSWORD STRENGTH
+   ================================================================ */
+
+.auth-signup-panel .password-strength-container {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-signup-panel .password-strength-bar {
+  flex: 1;
+  height: 2px;
+  background: rgba(0, 240, 255, 0.08);
+  border-radius: 100px;
+  overflow: hidden;
+}
+
+.auth-signup-panel .password-strength-fill {
+  height: 100%;
+  border-radius: 100px;
+  transition: width 0.4s var(--su-t-smooth), background-color 0.4s ease;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.auth-signup-panel .password-strength-label {
+  font-family: var(--su-font-display);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  min-width: 56px;
+  text-align: right;
+}
+
+.auth-signup-panel .auth-field-hint {
+  margin-top: 8px;
+  font-size: 11.5px;
+  font-weight: 300;
+  color: var(--su-text-dim);
+  line-height: 1.55;
+  letter-spacing: 0.01em;
+}
+
+/* ================================================================
+   PASSWORD MATCH
+   ================================================================ */
+
+.auth-signup-panel .password-match-indicator {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.auth-signup-panel .password-match-indicator::before {
+  content: '▸';
+  font-size: 10px;
+}
+
+.auth-signup-panel .password-match-indicator.match {
+  color: var(--su-success);
+}
+
+.auth-signup-panel .password-match-indicator.no-match {
+  color: var(--su-error);
+}
+
+/* ================================================================
+   ERROR BOX
+   ================================================================ */
+
+.auth-signup-panel .auth-error-box {
+  background: var(--su-error-bg);
+  border: 1px solid var(--su-error-border);
+  color: #ff8fa3;
+  padding: 12px 16px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 400;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  line-height: 1.5;
+  animation: suShake 0.35s ease-out;
+}
+
+.auth-signup-panel .auth-error-box::before {
+  content: '⚡';
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+@keyframes suShake {
+  0%,100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  40%      { transform: translateX(6px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(4px); }
+}
+
+/* ================================================================
+   ACTIONS
+   ================================================================ */
+
+.auth-signup-panel .auth-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+/* ================================================================
+   PRIMARY BUTTON
+   ================================================================ */
+
+.auth-signup-panel .auth-btn-primary {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  padding: 15px 24px;
+  background: transparent;
+  border: 1px solid var(--su-cyan-border);
+  border-radius: var(--su-radius-btn);
+  font-family: var(--su-font-display);
+  font-size: 18px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--su-cyan);
+  cursor: pointer;
+  transition:
+    border-color var(--su-t-snap),
+    color var(--su-t-snap),
+    transform var(--su-t-spring),
+    box-shadow var(--su-t-mid);
+  box-shadow: 0 0 16px var(--su-cyan-glow), inset 0 0 16px rgba(0, 240, 255, 0.04);
+  animation: suFieldIn 0.45s 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* Sweep fill on hover */
+.auth-signup-panel .auth-btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--su-cyan-glow), var(--su-cyan-dim), var(--su-cyan-glow), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.5s ease;
+}
+
+.auth-signup-panel .auth-btn-primary:hover:not(:disabled) {
+  color: #ffffff;
+  border-color: var(--su-cyan);
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 30px var(--su-cyan-glow),
+    0 0 60px rgba(0, 240, 255, 0.08),
+    inset 0 0 20px rgba(0, 240, 255, 0.07);
+}
+
+.auth-signup-panel .auth-btn-primary:hover:not(:disabled)::before {
+  transform: translateX(100%);
+}
+
+.auth-signup-panel .auth-btn-primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.99);
+  box-shadow: 0 0 14px var(--su-cyan-glow);
+}
+
+.auth-signup-panel .auth-btn-primary:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ================================================================
+   GHOST BUTTON
+   ================================================================ */
+
+.auth-signup-panel .auth-btn-ghost {
+  width: 100%;
+  padding: 13px 24px;
+  background: transparent;
+  border: 1px solid var(--su-border-faint);
+  border-radius: var(--su-radius-btn);
+  font-family: var(--su-font-body);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--su-text-dim);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: all var(--su-t-mid);
+  animation: suFieldIn 0.45s 0.48s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.auth-signup-panel .auth-btn-ghost:hover:not(:disabled) {
+  background: rgba(0, 240, 255, 0.04);
+  border-color: var(--su-border-mid);
+  color: var(--su-text-mid);
+}
+
+.auth-signup-panel .auth-btn-ghost:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ================================================================
+   OTP MODAL
+   ================================================================ */
+
+.otp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 2, 8, 0.82);
+  backdrop-filter: blur(10px) saturate(1.3);
+  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: suOverlayIn 0.22s ease-out both;
+}
+
+@keyframes suOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.otp-modal-content {
+  background: linear-gradient(150deg, rgba(0, 12, 28, 0.97) 0%, rgba(0, 6, 18, 0.99) 100%);
+  backdrop-filter: blur(48px);
+  -webkit-backdrop-filter: blur(48px);
+  border-radius: var(--su-radius-panel);
+  padding: 48px 40px 38px;
+  max-width: 410px;
+  width: 100%;
+  border: 1px solid var(--su-border-faint);
+  box-shadow:
+    0 0 0 1px rgba(0, 240, 255, 0.06) inset,
+    0 50px 120px rgba(0, 0, 0, 0.9),
+    0 0 80px rgba(0, 240, 255, 0.05);
+  position: relative;
+  overflow: hidden;
+  animation: suModalIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Cyan glow top edge */
+.otp-modal-content::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 15%; right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--su-cyan), transparent);
+  box-shadow: 0 0 16px var(--su-cyan);
+  opacity: 0.5;
+}
+
+/* Violet ambient bottom */
+.otp-modal-content::after {
+  content: '';
+  position: absolute;
+  bottom: -100px; right: -100px;
+  width: 250px; height: 250px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--su-violet-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+@keyframes suModalIn {
+  from { opacity: 0; transform: scale(0.9) translateY(24px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Close button */
+.otp-modal-close {
+  position: absolute;
+  top: 14px; right: 14px;
+  background: rgba(0, 240, 255, 0.05);
+  border: 1px solid var(--su-border-faint);
+  color: var(--su-text-dim);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  width: 32px; height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all var(--su-t-snap);
+  font-family: var(--su-font-body);
+}
+
+.otp-modal-close:hover {
+  background: rgba(0, 240, 255, 0.1);
+  border-color: var(--su-cyan-border);
+  color: var(--su-cyan);
+  transform: scale(1.1) rotate(90deg);
+  box-shadow: 0 0 10px var(--su-cyan-glow);
+}
+
+/* OTP Header */
+.otp-modal-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.otp-icon {
+  display: inline-block;
+  font-family: var(--su-font-display);
+  font-size: 40px;
+  letter-spacing: 4px;
+  color: var(--su-cyan);
+  margin-bottom: 18px;
+  text-shadow: 0 0 20px var(--su-cyan), 0 0 40px rgba(0,240,255,0.4);
+  animation: suIconPulse 2s ease-in-out infinite;
+}
+
+@keyframes suIconPulse {
+  0%, 100% { text-shadow: 0 0 20px var(--su-cyan), 0 0 40px rgba(0,240,255,0.4); }
+  50%       { text-shadow: 0 0 30px var(--su-cyan), 0 0 60px rgba(0,240,255,0.6), 0 0 80px rgba(0,240,255,0.2); }
+}
+
+.otp-modal-title {
+  font-family: var(--su-font-display);
+  font-size: 32px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--su-text-bright);
+  margin: 0 0 10px 0;
+}
+
+.otp-modal-subtitle {
+  font-family: var(--su-font-body);
+  font-size: 13.5px;
+  font-weight: 300;
+  color: var(--su-text-dim);
+  margin: 0;
+  line-height: 1.65;
+}
+
+.otp-modal-subtitle strong {
+  color: var(--su-cyan);
+  font-weight: 500;
+}
+
+/* OTP inputs */
+.otp-input-container {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.otp-input {
+  width: 50px; height: 58px;
+  text-align: center;
+  font-family: var(--su-font-display);
+  font-size: 28px;
+  letter-spacing: 0.1em;
+  color: var(--su-cyan);
+  background: var(--su-bg-input);
+  border: 1px solid var(--su-border-faint);
+  border-radius: var(--su-radius-otp);
+  outline: none;
+  box-shadow: var(--su-shadow-input);
+  caret-color: var(--su-cyan);
+  transition:
+    border-color var(--su-t-snap),
+    background var(--su-t-snap),
+    box-shadow var(--su-t-mid),
+    transform var(--su-t-spring);
+}
+
+.otp-input:hover {
+  background: rgba(0, 240, 255, 0.06);
+  border-color: rgba(0, 240, 255, 0.16);
+}
+
+.otp-input:focus {
+  background: var(--su-bg-input-focus);
+  border-color: var(--su-cyan-border);
+  box-shadow: 0 0 0 3px var(--su-cyan-glow), 0 0 20px rgba(0,240,255,0.1);
+  transform: translateY(-3px) scale(1.06);
+}
+
+.otp-input:not(:placeholder-shown) {
+  border-color: var(--su-cyan-dim);
+  background: rgba(0, 240, 255, 0.05);
+  text-shadow: 0 0 10px var(--su-cyan);
+}
+
+/* OTP resend */
+.otp-resend-container {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.otp-resend-timer {
+  font-family: var(--su-font-body);
+  font-size: 12.5px;
+  font-weight: 300;
+  color: var(--su-text-dim);
+  margin: 0;
+  letter-spacing: 0.03em;
+}
+
+.otp-resend-button {
+  background: none;
+  border: none;
+  color: var(--su-cyan-mid);
+  font-family: var(--su-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  padding: 4px 2px;
+  position: relative;
+  transition: color var(--su-t-snap), text-shadow var(--su-t-snap);
+}
+
+.otp-resend-button:hover {
+  color: var(--su-cyan);
+  text-shadow: 0 0 10px var(--su-cyan-glow);
+}
+
+.otp-help-text {
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 300;
+  color: var(--su-text-dim);
+  margin: 16px 0 0 0;
+  line-height: 1.6;
+  font-family: var(--su-font-body);
+}
+
+/* OTP error */
+.otp-modal-content .auth-error-box {
+  background: var(--su-error-bg);
+  border: 1px solid var(--su-error-border);
+  color: #ff8fa3;
+  padding: 11px 15px;
+  border-radius: 9px;
+  font-size: 13px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.otp-modal-content .auth-error-box::before {
+  content: '⚡';
+}
+
+/* OTP verify button */
+.otp-modal-content .auth-btn-primary {
+  width: 100%;
+  padding: 14px 24px;
+  background: transparent;
+  border: 1px solid var(--su-cyan-border);
+  border-radius: var(--su-radius-btn);
+  font-family: var(--su-font-display);
+  font-size: 17px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--su-cyan);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all var(--su-t-mid);
+  box-shadow: 0 0 16px var(--su-cyan-glow);
+}
+
+.otp-modal-content .auth-btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(0,240,255,0.1), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.5s ease;
+}
+
+.otp-modal-content .auth-btn-primary:hover:not(:disabled) {
+  color: #fff;
+  border-color: var(--su-cyan);
+  box-shadow: 0 0 28px var(--su-cyan-glow), 0 0 60px rgba(0,240,255,0.06);
+}
+
+.otp-modal-content .auth-btn-primary:hover:not(:disabled)::before {
+  transform: translateX(100%);
+}
+
+.otp-modal-content .auth-btn-primary:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+
+@media (max-width: 640px) {
+  .auth-signup-panel { padding: 38px 26px; }
+  .auth-signup-panel .auth-panel-title { font-size: 36px; }
+  .otp-modal-content { padding: 36px 26px 30px; }
+  .otp-modal-title { font-size: 26px; }
+  .otp-input-container { gap: 8px; }
+  .otp-input { width: 42px; height: 50px; font-size: 22px; }
+  .auth-field-input { font-size: 16px; }
+}
+
+/* ================================================================
+   FOCUS VISIBLE
+   ================================================================ */
+
+.auth-signup-panel .auth-field-input:focus-visible,
+.otp-input:focus-visible {
+  outline: 2px solid var(--su-cyan);
+  outline-offset: 2px;
+}
+
+.auth-signup-panel .auth-btn-primary:focus-visible,
+.auth-signup-panel .auth-btn-ghost:focus-visible {
+  outline: 2px solid var(--su-cyan);
+  outline-offset: 3px;
+}
+
+/* ================================================================
+   REDUCED MOTION
+   ================================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

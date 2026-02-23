@@ -1,0 +1,146 @@
+import { useState } from 'react'
+import './auth.css'
+
+function Login({ role, onSubmit, onBack, onSignupClick }) {
+  const [email,     setEmail]    = useState('')
+  const [password,  setPassword] = useState('')
+  const [showPass,  setShowPass] = useState(false)
+  const [error,     setError]    = useState('')
+  const [isLoading, setIsLoading]= useState(false)
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setIsLoading(true)
+    try {
+      await onSubmit?.({ email, password, role })
+    } catch (err) {
+      setError(err?.message ?? 'Login failed')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const getRoleLabel = () => ({
+    manufacturer: 'Manufacturer',
+    transporter:  'Transporter',
+    dealer:       'Dealer',
+    retail:       'Retail Shop',
+    admin:        'Admin',
+  })[role] || role
+
+  return (
+    <main className="auth-scene">
+      <form onSubmit={handleSubmit} className="auth-panel">
+
+        {/* ── Role Badge ── */}
+        <div style={{ textAlign: 'center', marginBottom: 8 }}>
+          <div style={{
+            display: 'inline-block',
+            padding: '4px 14px',
+            background: 'rgba(34,211,238,0.08)',
+            border: '1px solid rgba(34,211,238,0.25)',
+            borderRadius: 9999,
+            fontSize: 12,
+            fontWeight: 600,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: '#22d3ee',
+            marginBottom: 16,
+          }}>
+            {getRoleLabel()}
+          </div>
+        </div>
+
+        {/* ── Title ── */}
+        <h2 className="auth-panel-title">Welcome Back</h2>
+        <p className="auth-panel-subtitle">
+          Sign in to your {getRoleLabel()} account
+        </p>
+
+        {/* ── Email ── */}
+        <div className="auth-field-group">
+          <label htmlFor="login-email" className="auth-field-label">
+            Email Address
+          </label>
+          <input
+            id="login-email"
+            type="email"
+            required
+            placeholder="you@example.com"
+            className="auth-field-input"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+
+        {/* ── Password ── */}
+        <div className="auth-field-group">
+          <label htmlFor="login-password" className="auth-field-label">
+            Password
+          </label>
+          <div className="auth-password-wrapper">
+            <input
+              id="login-password"
+              type={showPass ? 'text' : 'password'}
+              required
+              placeholder="Enter your password"
+              className="auth-field-input"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button
+              type="button"
+              className="auth-password-toggle"
+              onClick={() => setShowPass(!showPass)}
+            >
+              {showPass ? 'HIDE' : 'SHOW'}
+            </button>
+          </div>
+        </div>
+
+        {/* ── Error ── */}
+        {!!error && <div className="auth-error-box">{error}</div>}
+
+        {/* ── Actions ── */}
+        <div className="auth-actions">
+
+          {/* LOGIN only */}
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="auth-btn-primary"
+          >
+            {isLoading ? 'Signing in...' : '🔐 Login'}
+          </button>
+
+          {/* BACK */}
+          <button
+            type="button"
+            onClick={onBack}
+            disabled={isLoading}
+            className="auth-btn-ghost"
+          >
+            ← Back
+          </button>
+
+        </div>
+
+        {/* ── Switch to signup ── */}
+        <p className="auth-switch-row">
+          Don't have an account?{' '}
+          <button
+            type="button"
+            className="auth-switch-link"
+            onClick={onSignupClick}
+          >
+            Sign up free
+          </button>
+        </p>
+
+      </form>
+    </main>
+  )
+}
+
+export default Login
