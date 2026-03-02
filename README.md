@@ -196,11 +196,11 @@ For local testing:
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Admin | admin@globalsupply.com | admin123 |
-| Manufacturer | manufacturer@globalsupply.com | maker123 |
-| Transporter | transporter@globalsupply.com | transport123 |
-| Dealer | dealer@globalsupply.com | dealer123 |
-| Retail | retail@globalsupply.com | retail123 |
+| Admin | admin@globalsupply.com |  
+| Manufacturer | manufacturer@globalsupply.com 
+| Transporter | transporter@globalsupply.com 
+| Dealer | dealer@globalsupply.com 
+| Retail | retail@globalsupply.com 
 
 ## API Modules
 
