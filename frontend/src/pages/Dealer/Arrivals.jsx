@@ -1,10 +1,42 @@
 import { useEffect, useMemo, useState } from 'react'
 import { dealerApi } from '../../api/axiosInstance'
+import { connectGpsSocket, disconnectGpsSocket } from '../../api/socket'
 import StatusDonut from '../../components/charts/StatusDonut'
 import Table from '../../components/common/Table'
 import Loader from '../../components/common/Loader'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import './dealer.css'
+
+const DEALER_LOCATION = {
+  lat: 12.9716,
+  lng: 77.5946,
+}
+
+function toNumber(value) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const radius = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return radius * c
+}
+
+function progressByStatus(status) {
+  if (status === 'Arriving Today') return 95
+  if (status === 'Delayed') return 35
+  if (status === 'Received') return 100
+  return 70
+}
 
 function mapShipmentStatus(status) {
   const normalized = String(status || '').toLowerCase()
@@ -17,8 +49,7 @@ function mapShipmentStatus(status) {
 function normalizeShipments(items = []) {
   return items.map((shipment, index) => {
     const status = mapShipmentStatus(shipment.status)
-    const fallbackProgress =
-      status === 'Arriving Today' ? 95 : status === 'Delayed' ? 35 : status === 'Received' ? 100 : 70
+    const fallbackProgress = progressByStatus(status)
 
     const parsedProgress = Number(shipment.progress)
     const progress = Number.isFinite(parsedProgress)
@@ -39,8 +70,67 @@ function normalizeShipments(items = []) {
       progress,
       blockchainVerified: shipment.blockchainVerified ?? shipment.verified ?? true,
       items: Number(shipment.items || shipment.quantity || 0),
+      distanceKm: Number.isFinite(Number(shipment.distanceKm)) ? Number(shipment.distanceKm) : null,
+      etaHours: Number.isFinite(Number(shipment.etaHours)) ? Number(shipment.etaHours) : null,
+      dealerMessage: shipment.dealerMessage || 'Waiting for live GPS signal',
     }
   })
+}
+
+function mergeGpsIntoShipments(existing = [], gpsSnapshot = {}) {
+  const mergedById = new Map(existing.map((shipment) => [shipment.shipmentId, shipment]))
+
+  Object.entries(gpsSnapshot || {}).forEach(([shipmentId, gps]) => {
+    const current = mergedById.get(shipmentId) || {
+      id: existing.length + mergedById.size + 1,
+      shipmentId,
+      orderId: '--',
+      manufacturer: 'Global Supply Manufacturer',
+      carrier: 'Prime Logistics',
+      origin: 'Unknown',
+      destination: 'Unknown',
+      status: 'In Transit',
+      estimatedArrival: new Date().toISOString().slice(0, 10),
+      currentLocation: 'Location unavailable',
+      progress: 70,
+      blockchainVerified: true,
+      items: 0,
+      distanceKm: null,
+      etaHours: null,
+      dealerMessage: 'Waiting for live GPS signal',
+    }
+
+    const lat = toNumber(gps?.lat)
+    const lng = toNumber(gps?.lng)
+    const hasGps = lat !== null && lng !== null
+    const distanceKm = hasGps
+      ? Number(haversineKm(lat, lng, DEALER_LOCATION.lat, DEALER_LOCATION.lng).toFixed(1))
+      : current.distanceKm
+    const etaHours = distanceKm !== null ? Number((distanceKm / 45).toFixed(1)) : current.etaHours
+    const status = mapShipmentStatus(gps?.status || current.status)
+
+    mergedById.set(shipmentId, {
+      ...current,
+      shipmentId,
+      status,
+      origin: gps?.origin || current.origin,
+      destination: gps?.destination || current.destination,
+      estimatedArrival: gps?.eta || current.estimatedArrival,
+      currentLocation: hasGps ? `${lat.toFixed(4)}, ${lng.toFixed(4)}` : current.currentLocation,
+      progress: progressByStatus(status),
+      distanceKm,
+      etaHours,
+      dealerMessage:
+        distanceKm !== null && etaHours !== null
+          ? `Your shipment is ${distanceKm} km away, ETA ${etaHours} hours`
+          : current.dealerMessage,
+      lat: hasGps ? lat : current.lat,
+      lng: hasGps ? lng : current.lng,
+      vehicleNumber: gps?.vehicleNumber || current.vehicleNumber,
+    })
+  })
+
+  return Array.from(mergedById.values())
 }
 
 function formatDate(value) {
@@ -54,6 +144,8 @@ function Arrivals({ user, onLogout, onNavigate, currentPath }) {
   const [filterStatus, setFilterStatus] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedShipment, setSelectedShipment] = useState(null)
+  const [isSocketConnected, setIsSocketConnected] = useState(false)
+  const [lastSocketUpdate, setLastSocketUpdate] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -74,12 +166,42 @@ function Arrivals({ user, onLogout, onNavigate, currentPath }) {
 
     loadShipments()
     const interval = setInterval(loadShipments, 30000)
+    connectGpsSocket({
+      onOpen: () => {
+        if (mounted) {
+          setIsSocketConnected(true)
+        }
+      },
+      onClose: () => {
+        if (mounted) {
+          setIsSocketConnected(false)
+        }
+      },
+      onMessage: (payload) => {
+        if (!mounted || !payload || typeof payload !== 'object') {
+          return
+        }
+        const gpsSnapshot = payload.shipments || {}
+        setLastSocketUpdate(payload.generatedAt || new Date().toISOString())
+        setShipments((current) => mergeGpsIntoShipments(current, gpsSnapshot))
+      },
+    })
 
     return () => {
       mounted = false
       clearInterval(interval)
+      setIsSocketConnected(false)
+      disconnectGpsSocket()
     }
   }, [])
+
+  useEffect(() => {
+    if (!selectedShipment) return
+    const updated = shipments.find((item) => item.shipmentId === selectedShipment.shipmentId)
+    if (updated && updated !== selectedShipment) {
+      setSelectedShipment(updated)
+    }
+  }, [shipments, selectedShipment])
 
   const shipmentStatusData = useMemo(() => [
     { label: 'In Transit', value: shipments.filter((s) => s.status === 'In Transit').length, color: '#3b82f6' },
@@ -90,12 +212,12 @@ function Arrivals({ user, onLogout, onNavigate, currentPath }) {
   const stats = useMemo(() => {
     const received = shipments.filter((s) => s.status === 'Received').length
     return [
-      { label: 'In Transit', value: shipmentStatusData[0].value, trend: 'Live' },
+      { label: 'In Transit', value: shipmentStatusData[0].value, trend: isSocketConnected ? 'WebSocket live' : 'Polling' },
       { label: 'Arriving Today', value: shipmentStatusData[1].value, trend: 'Live ETA' },
       { label: 'Delayed', value: shipmentStatusData[2].value, trend: 'Needs attention' },
       { label: 'Received', value: received, trend: 'Completed' },
     ]
-  }, [shipmentStatusData, shipments])
+  }, [isSocketConnected, shipmentStatusData, shipments])
 
   const filteredShipments = useMemo(() => {
     return shipments.filter((shipment) => {
@@ -144,6 +266,10 @@ function Arrivals({ user, onLogout, onNavigate, currentPath }) {
     manufacturer: shipment.manufacturer,
     route: `${shipment.origin} -> ${shipment.destination}`,
     currentLocation: shipment.currentLocation,
+    dealerEta:
+      shipment.distanceKm !== null && shipment.etaHours !== null
+        ? `${shipment.distanceKm} km | ETA ${shipment.etaHours}h`
+        : 'GPS pending',
     eta: formatDate(shipment.estimatedArrival),
     status: getStatusBadge(shipment.status),
   }))
@@ -176,7 +302,10 @@ function Arrivals({ user, onLogout, onNavigate, currentPath }) {
     >
       <div style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 24, fontWeight: 'bold', margin: 0 }}>Inbound Shipments</h2>
-        <p style={{ color: '#6b7280', margin: '4px 0 0 0' }}>Track and manage incoming deliveries</p>
+        <p style={{ color: '#6b7280', margin: '4px 0 0 0' }}>
+          Track and manage incoming deliveries. GPS stream: {isSocketConnected ? 'Connected' : 'Reconnecting'} | Last ping:{' '}
+          {lastSocketUpdate ? new Date(lastSocketUpdate).toLocaleTimeString() : '--'}
+        </p>
       </div>
 
       <section style={{ display: 'grid', gap: 24, gridTemplateColumns: '2fr 1fr', marginBottom: 24 }}>
@@ -252,6 +381,7 @@ function Arrivals({ user, onLogout, onNavigate, currentPath }) {
             { key: 'manufacturer', label: 'Manufacturer' },
             { key: 'route', label: 'Route' },
             { key: 'currentLocation', label: 'Current Location' },
+            { key: 'dealerEta', label: 'Dealer ETA' },
             { key: 'eta', label: 'ETA' },
             { key: 'status', label: 'Status' },
           ]}
@@ -386,6 +516,20 @@ function Arrivals({ user, onLogout, onNavigate, currentPath }) {
                 >
                   {selectedShipment.blockchainVerified ? 'Verified on Blockchain' : 'Not Verified'}
                 </span>
+              </div>
+
+              <div
+                style={{
+                  padding: 12,
+                  background: '#eff6ff',
+                  borderRadius: 8,
+                  border: '1px solid #bfdbfe',
+                }}
+              >
+                <p style={{ margin: 0, color: '#1e3a8a', fontWeight: 600 }}>Dealer Live ETA</p>
+                <p style={{ margin: '4px 0 0 0', color: '#1e40af', fontSize: 14 }}>
+                  {selectedShipment.dealerMessage}
+                </p>
               </div>
             </div>
           </div>

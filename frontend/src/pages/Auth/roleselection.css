@@ -1,34 +1,63 @@
 /* ═══════════════════════════════════════════════════════════════════
    GLOBAL SUPPLY CHAIN PLATFORM — roleselection.css
-   Design System: Dark command-center · Teal/cyan · Syne + DM Sans
+   Theme: NEON TECH · Deep steel gray · Per-role neon signatures
+   Fonts: Syne (display) + DM Sans (body)
+   Signature: 3D role cards · Unique neon per role · Holographic check
    ═══════════════════════════════════════════════════════════════════ */
 
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
 
-/* ── Shared tokens ──────────────────────────────────────────────── */
+/* ── Design Tokens ──────────────────────────────────────────────── */
 :root {
-  --bg-deep:        #030712;
-  --bg-mid:         #0d1117;
-  --bg-card:        rgba(255, 255, 255, 0.04);
-  --bg-card-hover:  rgba(255, 255, 255, 0.07);
-  --border:         rgba(255, 255, 255, 0.08);
-  --border-bright:  rgba(56, 189, 248, 0.35);
-  --accent-cyan:    #22d3ee;
-  --accent-teal:    #14b8a6;
-  --accent-purple:  #818cf8;
-  --accent-amber:   #fbbf24;
-  --text-primary:   #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted:     #475569;
-  --glow-cyan:      0 0 40px rgba(34, 211, 238, 0.25);
-  --radius-card:    20px;
-  --radius-btn:     10px;
-  --font-display:   'Syne', sans-serif;
-  --font-body:      'DM Sans', sans-serif;
-  --t-snap:         0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --t-spring:       0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  --t-smooth:       0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  /* Deep steel grays */
+  --rs-bg-deep:        #080a0e;
+  --rs-bg-mid:         #0e1218;
+  --rs-bg-steel:       #13181f;
+  --rs-bg-card:        rgba(255, 255, 255, 0.03);
+  --rs-bg-card-hover:  rgba(255, 255, 255, 0.055);
+
+  /* Borders */
+  --rs-border:         rgba(255, 255, 255, 0.07);
+  --rs-border-bright:  rgba(0, 212, 255, 0.35);
+
+  /* Role neon signatures */
+  --role-admin:        #00d4ff;   /* Electric blue */
+  --role-admin-glow:   rgba(0, 212, 255, 0.2);
+  --role-supplier:     #ff0090;   /* Neon magenta */
+  --role-supplier-glow:rgba(255, 0, 144, 0.18);
+  --role-logistics:    #39ff14;   /* Neon green */
+  --role-logistics-glow:rgba(57, 255, 20, 0.18);
+  --role-retailer:     #ff6b00;   /* Neon orange */
+  --role-retailer-glow:rgba(255, 107, 0, 0.18);
+  --role-analyst:      #bf00ff;   /* Neon purple */
+  --role-analyst-glow: rgba(191, 0, 255, 0.18);
+
+  /* Global accent */
+  --neon-blue:         #00d4ff;
+  --neon-blue-glow:    rgba(0, 212, 255, 0.18);
+
+  /* Text */
+  --rs-text-primary:   #e8edf5;
+  --rs-text-secondary: rgba(180, 200, 220, 0.6);
+  --rs-text-muted:     rgba(100, 130, 160, 0.38);
+
+  /* Geometry */
+  --rs-radius-card:    20px;
+  --rs-radius-btn:     10px;
+  --rs-perspective:    1400px;
+
+  /* Transitions */
+  --rs-t-snap:   0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --rs-t-mid:    0.26s cubic-bezier(0.4, 0, 0.2, 1);
+  --rs-t-spring: 0.44s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --rs-t-smooth: 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --rs-t-3d:     0.5s cubic-bezier(0.23, 1, 0.32, 1);
+
+  /* Fonts */
+  --rs-font-display: 'Syne', sans-serif;
+  --rs-font-body:    'DM Sans', sans-serif;
 }
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* ── Scene ──────────────────────────────────────────────────────── */
@@ -40,256 +69,584 @@
   padding: 48px 24px;
   position: relative;
   overflow: hidden;
-  background: var(--bg-deep);
-  font-family: var(--font-body);
+  background: var(--rs-bg-deep);
+  font-family: var(--rs-font-body);
+  perspective: var(--rs-perspective);
 }
-.role-selection-scene.role-selection-theme-matrix { background: var(--bg-deep); }
 
-/* ── Background (identical system to homepage) ──────────────────── */
+.role-selection-scene.role-selection-theme-matrix {
+  background: var(--rs-bg-deep);
+}
+
+/* ── Background ─────────────────────────────────────────────────── */
 .role-selection-background {
-  position: absolute; inset: 0;
-  pointer-events: none; overflow: hidden;
-}
-.role-selection-background::before {
-  content: ''; position: absolute; inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-  opacity: 0.4; z-index: 0;
-}
-.role-selection-background::after {
-  content: ''; position: absolute; inset: 0;
-  background-image:
-    linear-gradient(rgba(56,189,248,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(56,189,248,0.04) 1px, transparent 1px);
-  background-size: 80px 80px; z-index: 0;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
 }
 
+/* Neon aurora */
+.role-selection-background::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 8% 15%, rgba(0, 212, 255, 0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 55% at 92% 88%, rgba(255, 0, 144, 0.06) 0%, transparent 58%),
+    radial-gradient(ellipse 45% 45% at 50% 50%, rgba(8, 10, 14, 0.97) 0%, transparent 100%),
+    radial-gradient(ellipse 40% 40% at 75% 20%, rgba(191, 0, 255, 0.04) 0%, transparent 55%);
+  z-index: 0;
+  animation: rsAuroraShift 22s ease-in-out infinite alternate;
+}
+
+@keyframes rsAuroraShift {
+  0%   { opacity: 1; filter: hue-rotate(0deg); }
+  50%  { opacity: 0.8; filter: hue-rotate(20deg); }
+  100% { opacity: 1; filter: hue-rotate(-14deg); }
+}
+
+/* Neon tech grid scrolling */
+.role-selection-background::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0, 212, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.025) 1px, transparent 1px);
+  background-size: 60px 60px;
+  z-index: 0;
+  animation: rsGridScroll 28s linear infinite;
+  mask-image: radial-gradient(ellipse 88% 88% at 50% 50%, black 0%, transparent 100%);
+}
+
+@keyframes rsGridScroll {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(60px); }
+}
+
+/* Orbs */
 .gradient-orb {
-  position: absolute; border-radius: 50%;
-  filter: blur(120px);
-  animation: orbFloat 18s ease-in-out infinite; z-index: 0;
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(110px);
+  animation: rsOrbFloat 20s ease-in-out infinite;
+  z-index: 0;
 }
 .orb-1 {
-  width:600px;height:600px;
-  background:radial-gradient(circle,rgba(20,184,166,.18) 0%,transparent 70%);
-  top:-200px;left:-150px;animation-delay:0s;
+  width: 650px; height: 650px;
+  background: radial-gradient(circle, rgba(0, 212, 255, 0.12) 0%, transparent 70%);
+  top: -220px; left: -180px;
+  animation-delay: 0s;
 }
 .orb-2 {
-  width:700px;height:700px;
-  background:radial-gradient(circle,rgba(99,102,241,.14) 0%,transparent 70%);
-  bottom:-250px;right:-200px;animation-delay:6s;
+  width: 580px; height: 580px;
+  background: radial-gradient(circle, rgba(255, 0, 144, 0.1) 0%, transparent 70%);
+  bottom: -200px; right: -160px;
+  animation-delay: 7s;
 }
 .orb-3 {
-  width:400px;height:400px;
-  background:radial-gradient(circle,rgba(34,211,238,.12) 0%,transparent 70%);
-  top:40%;left:55%;animation-delay:12s;
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(191, 0, 255, 0.09) 0%, transparent 70%);
+  top: 38%; left: 52%;
+  animation-delay: 14s;
 }
-@keyframes orbFloat {
-  0%,100%{transform:translate(0,0) scale(1)}
-  33%{transform:translate(40px,-40px) scale(1.05)}
-  66%{transform:translate(-30px,25px) scale(.95)}
+
+@keyframes rsOrbFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.75; }
+  25%       { transform: translate(45px, -45px) scale(1.05); opacity: 1; }
+  50%       { transform: translate(-25px, 28px) scale(0.94); opacity: 0.65; }
+  75%       { transform: translate(28px, 18px) scale(1.02); opacity: 0.88; }
+}
+
+/* Scan lines */
+.role-selection-background .scanlines {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 212, 255, 0.005) 3px,
+    rgba(0, 212, 255, 0.005) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* ── Container ──────────────────────────────────────────────────── */
 .role-selection-container {
-  width:100%;max-width:1200px;
-  position:relative;z-index:1;
-  animation:revealUp .8s cubic-bezier(.16,1,.3,1) both;
+  width: 100%;
+  max-width: 1200px;
+  position: relative;
+  z-index: 1;
+  animation: rsRevealUp 0.9s cubic-bezier(0.23, 1, 0.32, 1) both;
 }
-@keyframes revealUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+
+@keyframes rsRevealUp {
+  from { opacity: 0; transform: translateY(36px) rotateX(5deg); filter: blur(3px); }
+  to   { opacity: 1; transform: translateY(0) rotateX(0deg); filter: blur(0); }
+}
 
 /* ── Header ─────────────────────────────────────────────────────── */
 .role-selection-header {
-  text-align:center; margin-bottom:52px;
-  animation:revealUp .8s cubic-bezier(.16,1,.3,1) .1s both;
+  text-align: center;
+  margin-bottom: 52px;
+  animation: rsRevealUp 0.9s cubic-bezier(0.23, 1, 0.32, 1) 0.1s both;
 }
+
 .role-step-chip {
-  display:inline-block;
-  margin-bottom:12px;
-  padding:5px 14px;
-  border-radius:100px;
-  border:1px solid rgba(20,184,166,.35);
-  background:rgba(20,184,166,.1);
-  color:#5eead4;
-  font-family:var(--font-body);
-  font-size:11px;
-  font-weight:600;
-  letter-spacing:.08em;
-  text-transform:uppercase;
+  display: inline-block;
+  margin-bottom: 14px;
+  padding: 5px 16px;
+  border-radius: 100px;
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  background: rgba(0, 212, 255, 0.07);
+  color: var(--neon-blue);
+  font-family: var(--rs-font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  box-shadow: 0 0 16px rgba(0, 212, 255, 0.1);
+  animation: rsChipPulse 3s ease-in-out infinite;
 }
+
+@keyframes rsChipPulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(0, 212, 255, 0.1); }
+  50%       { box-shadow: 0 0 24px rgba(0, 212, 255, 0.22), 0 0 50px rgba(0, 212, 255, 0.08); }
+}
+
 .role-selection-title {
-  font-family:var(--font-display);
-  font-size:clamp(32px,5vw,56px);
-  font-weight:800;letter-spacing:-.02em;line-height:1.1;
-  margin:0 0 16px 0;
-  background:linear-gradient(135deg,#f1f5f9 0%,var(--accent-cyan) 45%,var(--accent-teal) 75%,#f1f5f9 100%);
-  background-size:200% 200%;
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  animation:gradShift 4s ease infinite;
+  font-family: var(--rs-font-display);
+  font-size: clamp(32px, 5vw, 58px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  margin: 0 0 16px 0;
+  background: linear-gradient(120deg,
+    #e8edf5 0%,
+    var(--neon-blue) 22%,
+    #ffffff 42%,
+    #ff0090 60%,
+    #bf00ff 78%,
+    var(--neon-blue) 92%,
+    #e8edf5 100%
+  );
+  background-size: 280% 280%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: rsTitleShift 5s ease-in-out infinite;
+  filter: drop-shadow(0 0 22px rgba(0, 212, 255, 0.35))
+          drop-shadow(0 4px 10px rgba(0, 0, 0, 0.8));
 }
-@keyframes gradShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+
+@keyframes rsTitleShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 .role-selection-subtitle {
-  font-family:var(--font-body);font-size:17px;font-weight:400;
-  color:var(--text-secondary);margin:0 auto;max-width:520px;line-height:1.7;
+  font-family: var(--rs-font-body);
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--rs-text-secondary);
+  margin: 0 auto;
+  max-width: 520px;
+  line-height: 1.7;
 }
 
 /* ── Grid ───────────────────────────────────────────────────────── */
 .role-grid {
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-  gap:20px;margin-bottom:44px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 44px;
 }
 
-/* ── Role Card ──────────────────────────────────────────────────── */
+/* ── Role Card — 3D neon signature per role ─────────────────────── */
 .role-card {
-  background:rgba(13,17,23,.85);
-  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-  padding:36px 24px 28px;border-radius:var(--radius-card);
-  border:1px solid var(--border);
-  box-shadow:0 0 0 1px rgba(56,189,248,.04) inset,0 8px 32px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05);
-  cursor:pointer;
-  transition:transform var(--t-spring),box-shadow var(--t-smooth),border-color var(--t-snap);
-  text-align:center;position:relative;overflow:hidden;
-  display:flex;flex-direction:column;align-items:center;
-  min-height:230px;
-  animation:revealUp .8s cubic-bezier(.16,1,.3,1) both;
+  background: linear-gradient(
+    155deg,
+    rgba(14, 18, 24, 0.93) 0%,
+    rgba(10, 13, 18, 0.97) 100%
+  );
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  padding: 36px 24px 28px;
+  border-radius: var(--rs-radius-card);
+  border: 1px solid var(--rs-border);
+  box-shadow:
+    0 0 0 1px rgba(0, 212, 255, 0.03) inset,
+    0 10px 36px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: transform var(--rs-t-3d), box-shadow var(--rs-t-smooth), border-color var(--rs-t-snap);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 230px;
+  animation: rsRevealUp 0.9s cubic-bezier(0.23, 1, 0.32, 1) both;
+  transform-style: preserve-3d;
 }
-.role-card:nth-child(1){animation-delay:.15s}
-.role-card:nth-child(2){animation-delay:.22s}
-.role-card:nth-child(3){animation-delay:.29s}
-.role-card:nth-child(4){animation-delay:.36s}
-.role-card:nth-child(5){animation-delay:.43s}
+
+/* Staggered entrance */
+.role-card:nth-child(1) { animation-delay: 0.18s; }
+.role-card:nth-child(2) { animation-delay: 0.25s; }
+.role-card:nth-child(3) { animation-delay: 0.32s; }
+.role-card:nth-child(4) { animation-delay: 0.39s; }
+.role-card:nth-child(5) { animation-delay: 0.46s; }
+
+/* Neon top line — color per role */
+.role-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 15%; right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--neon-blue), transparent);
+  opacity: 0;
+  transition: opacity var(--rs-t-mid);
+  box-shadow: 0 0 16px var(--neon-blue);
+}
 
 /* Radial glow overlay */
-.role-card::before {
-  content:'';position:absolute;inset:0;border-radius:var(--radius-card);
-  background:radial-gradient(circle at 50% 0%,rgba(34,211,238,.08),transparent 65%);
-  opacity:0;transition:opacity var(--t-smooth);
-}
-/* Top accent line */
 .role-card::after {
-  content:'';position:absolute;top:0;left:20%;right:20%;height:1px;
-  background:linear-gradient(90deg,transparent,var(--accent-cyan),transparent);
-  opacity:0;transition:opacity var(--t-smooth);
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--rs-radius-card);
+  background: radial-gradient(circle at 50% 0%, rgba(0, 212, 255, 0.07), transparent 65%);
+  opacity: 0;
+  transition: opacity var(--rs-t-smooth);
 }
 
+/* Role-specific neon colors */
+.role-card[data-role="admin"]::before,
+.role-card:nth-child(1)::before {
+  background: linear-gradient(90deg, transparent, var(--role-admin), transparent);
+  box-shadow: 0 0 18px var(--role-admin);
+}
+.role-card[data-role="admin"]::after,
+.role-card:nth-child(1)::after {
+  background: radial-gradient(circle at 50% 0%, rgba(0, 212, 255, 0.08), transparent 65%);
+}
+
+.role-card[data-role="supplier"]::before,
+.role-card:nth-child(2)::before {
+  background: linear-gradient(90deg, transparent, var(--role-supplier), transparent);
+  box-shadow: 0 0 18px var(--role-supplier);
+}
+.role-card[data-role="supplier"]::after,
+.role-card:nth-child(2)::after {
+  background: radial-gradient(circle at 50% 0%, rgba(255, 0, 144, 0.08), transparent 65%);
+}
+
+.role-card[data-role="logistics"]::before,
+.role-card:nth-child(3)::before {
+  background: linear-gradient(90deg, transparent, var(--role-logistics), transparent);
+  box-shadow: 0 0 18px var(--role-logistics);
+}
+.role-card[data-role="logistics"]::after,
+.role-card:nth-child(3)::after {
+  background: radial-gradient(circle at 50% 0%, rgba(57, 255, 20, 0.07), transparent 65%);
+}
+
+.role-card[data-role="retailer"]::before,
+.role-card:nth-child(4)::before {
+  background: linear-gradient(90deg, transparent, var(--role-retailer), transparent);
+  box-shadow: 0 0 18px var(--role-retailer);
+}
+.role-card[data-role="retailer"]::after,
+.role-card:nth-child(4)::after {
+  background: radial-gradient(circle at 50% 0%, rgba(255, 107, 0, 0.07), transparent 65%);
+}
+
+.role-card[data-role="analyst"]::before,
+.role-card:nth-child(5)::before {
+  background: linear-gradient(90deg, transparent, var(--role-analyst), transparent);
+  box-shadow: 0 0 18px var(--role-analyst);
+}
+.role-card[data-role="analyst"]::after,
+.role-card:nth-child(5)::after {
+  background: radial-gradient(circle at 50% 0%, rgba(191, 0, 255, 0.08), transparent 65%);
+}
+
+/* Hover — 3D lift + neon role glow */
 .role-card:hover {
-  transform:translateY(-8px);border-color:var(--border-bright);
-  box-shadow:0 20px 48px rgba(0,0,0,.5),var(--glow-cyan);
+  transform: translateY(-12px) rotateX(4deg) rotateY(-1.5deg) scale(1.01);
+  border-color: rgba(0, 212, 255, 0.28);
+  box-shadow:
+    0 28px 60px rgba(0, 0, 0, 0.7),
+    0 0 40px rgba(0, 212, 255, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
-.role-card:hover::before,.role-card:hover::after{opacity:1}
-.role-card:active{transform:translateY(-2px) scale(.99)}
 
+.role-card:hover::before,
+.role-card:hover::after { opacity: 1; }
+
+/* Role-specific hover glow */
+.role-card:nth-child(1):hover { border-color: rgba(0, 212, 255, 0.35); box-shadow: 0 28px 60px rgba(0,0,0,.7), 0 0 40px var(--role-admin-glow), inset 0 1px 0 rgba(255,255,255,.05); }
+.role-card:nth-child(2):hover { border-color: rgba(255, 0, 144, 0.35); box-shadow: 0 28px 60px rgba(0,0,0,.7), 0 0 40px var(--role-supplier-glow), inset 0 1px 0 rgba(255,255,255,.05); }
+.role-card:nth-child(3):hover { border-color: rgba(57, 255, 20, 0.32); box-shadow: 0 28px 60px rgba(0,0,0,.7), 0 0 40px var(--role-logistics-glow), inset 0 1px 0 rgba(255,255,255,.05); }
+.role-card:nth-child(4):hover { border-color: rgba(255, 107, 0, 0.35); box-shadow: 0 28px 60px rgba(0,0,0,.7), 0 0 40px var(--role-retailer-glow), inset 0 1px 0 rgba(255,255,255,.05); }
+.role-card:nth-child(5):hover { border-color: rgba(191, 0, 255, 0.35); box-shadow: 0 28px 60px rgba(0,0,0,.7), 0 0 40px var(--role-analyst-glow), inset 0 1px 0 rgba(255,255,255,.05); }
+
+.role-card:active { transform: translateY(-4px) scale(0.99); }
+
+/* Active/selected state */
 .role-card.active {
-  border-color:rgba(34,211,238,.5);
-  background:rgba(34,211,238,.06);
-  transform:translateY(-10px);
-  box-shadow:0 24px 56px rgba(0,0,0,.55),0 0 0 1px rgba(34,211,238,.2) inset,var(--glow-cyan);
+  border-color: rgba(0, 212, 255, 0.45);
+  background: linear-gradient(155deg, rgba(0, 212, 255, 0.04) 0%, rgba(14, 18, 24, 0.97) 100%);
+  transform: translateY(-14px) rotateX(4deg) scale(1.01);
+  box-shadow:
+    0 32px 64px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(0, 212, 255, 0.2) inset,
+    0 0 50px rgba(0, 212, 255, 0.16);
 }
-.role-card.active::before,.role-card.active::after{opacity:1}
+.role-card.active::before,
+.role-card.active::after { opacity: 1; }
 
-/* Icon */
+/* Role-specific active */
+.role-card:nth-child(2).active { border-color: rgba(255, 0, 144, 0.45); background: linear-gradient(155deg, rgba(255, 0, 144, 0.04) 0%, rgba(14, 18, 24, 0.97) 100%); box-shadow: 0 32px 64px rgba(0,0,0,.75), 0 0 0 1px rgba(255,0,144,.18) inset, 0 0 50px rgba(255,0,144,.18); }
+.role-card:nth-child(3).active { border-color: rgba(57, 255, 20, 0.4); background: linear-gradient(155deg, rgba(57, 255, 20, 0.04) 0%, rgba(14, 18, 24, 0.97) 100%); box-shadow: 0 32px 64px rgba(0,0,0,.75), 0 0 0 1px rgba(57,255,20,.16) inset, 0 0 50px rgba(57,255,20,.16); }
+.role-card:nth-child(4).active { border-color: rgba(255, 107, 0, 0.42); background: linear-gradient(155deg, rgba(255, 107, 0, 0.04) 0%, rgba(14, 18, 24, 0.97) 100%); box-shadow: 0 32px 64px rgba(0,0,0,.75), 0 0 0 1px rgba(255,107,0,.17) inset, 0 0 50px rgba(255,107,0,.16); }
+.role-card:nth-child(5).active { border-color: rgba(191, 0, 255, 0.42); background: linear-gradient(155deg, rgba(191, 0, 255, 0.04) 0%, rgba(14, 18, 24, 0.97) 100%); box-shadow: 0 32px 64px rgba(0,0,0,.75), 0 0 0 1px rgba(191,0,255,.18) inset, 0 0 50px rgba(191,0,255,.16); }
+
+/* ── Card Icon ───────────────────────────────────────────────────── */
 .role-card-icon {
-  font-size:52px;margin-bottom:18px;display:block;line-height:1;
-  position:relative;z-index:1;
-  filter:drop-shadow(0 0 12px rgba(34,211,238,.3));
-  transition:filter var(--t-smooth),transform var(--t-spring);
+  font-size: 52px;
+  margin-bottom: 18px;
+  display: block;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.3));
+  transition: filter var(--rs-t-smooth), transform var(--rs-t-spring);
 }
 .role-card:hover .role-card-icon,
 .role-card.active .role-card-icon {
-  filter:drop-shadow(0 0 20px rgba(34,211,238,.7));
-  transform:scale(1.12) translateY(-3px);
+  transform: scale(1.14) translateY(-4px) translateZ(10px);
 }
 
-/* Title */
+/* Per-role icon glows on hover */
+.role-card:nth-child(1):hover .role-card-icon,
+.role-card:nth-child(1).active .role-card-icon { filter: drop-shadow(0 0 22px var(--role-admin)); }
+.role-card:nth-child(2):hover .role-card-icon,
+.role-card:nth-child(2).active .role-card-icon { filter: drop-shadow(0 0 22px var(--role-supplier)); }
+.role-card:nth-child(3):hover .role-card-icon,
+.role-card:nth-child(3).active .role-card-icon { filter: drop-shadow(0 0 22px var(--role-logistics)); }
+.role-card:nth-child(4):hover .role-card-icon,
+.role-card:nth-child(4).active .role-card-icon { filter: drop-shadow(0 0 22px var(--role-retailer)); }
+.role-card:nth-child(5):hover .role-card-icon,
+.role-card:nth-child(5).active .role-card-icon { filter: drop-shadow(0 0 22px var(--role-analyst)); }
+
+/* ── Card Title ─────────────────────────────────────────────────── */
 .role-card-title {
-  font-family:var(--font-display);font-size:17px;font-weight:700;
-  letter-spacing:-.01em;color:var(--text-primary);
-  margin:0 0 10px 0;position:relative;z-index:1;transition:color var(--t-snap);
+  font-family: var(--rs-font-display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--rs-text-primary);
+  margin: 0 0 10px 0;
+  position: relative;
+  z-index: 1;
+  transition: color var(--rs-t-snap), text-shadow var(--rs-t-snap);
 }
-.role-card:hover .role-card-title,.role-card.active .role-card-title{color:#fff}
+.role-card:hover .role-card-title,
+.role-card.active .role-card-title { color: #ffffff; }
 
-/* Description */
+/* Per-role title glow */
+.role-card:nth-child(1):hover .role-card-title { text-shadow: 0 0 16px rgba(0, 212, 255, 0.5); }
+.role-card:nth-child(2):hover .role-card-title { text-shadow: 0 0 16px rgba(255, 0, 144, 0.5); }
+.role-card:nth-child(3):hover .role-card-title { text-shadow: 0 0 16px rgba(57, 255, 20, 0.5); }
+.role-card:nth-child(4):hover .role-card-title { text-shadow: 0 0 16px rgba(255, 107, 0, 0.5); }
+.role-card:nth-child(5):hover .role-card-title { text-shadow: 0 0 16px rgba(191, 0, 255, 0.5); }
+
+/* ── Card Description ───────────────────────────────────────────── */
 .role-card-description {
-  font-family:var(--font-body);font-size:13px;font-weight:400;
-  color:var(--text-muted);line-height:1.65;
-  margin:0 0 16px 0;flex:1;position:relative;z-index:1;transition:color var(--t-snap);
+  font-family: var(--rs-font-body);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--rs-text-muted);
+  line-height: 1.65;
+  margin: 0 0 16px 0;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+  transition: color var(--rs-t-snap);
 }
-.role-card:hover .role-card-description,.role-card.active .role-card-description{color:var(--text-secondary)}
+.role-card:hover .role-card-description,
+.role-card.active .role-card-description { color: var(--rs-text-secondary); }
 
-/* Arrow */
+/* ── Card Arrow ─────────────────────────────────────────────────── */
 .role-card-arrow {
-  font-size:13px;color:var(--accent-cyan);opacity:0;
-  transform:translateX(-8px);transition:all var(--t-spring);
-  margin-top:auto;position:relative;z-index:1;
+  font-size: 13px;
+  color: var(--neon-blue);
+  opacity: 0;
+  transform: translateX(-10px) translateZ(-5px);
+  transition: all var(--rs-t-spring);
+  margin-top: auto;
+  position: relative;
+  z-index: 1;
 }
-.role-card:hover .role-card-arrow,.role-card.active .role-card-arrow{opacity:1;transform:translateX(0)}
+.role-card:hover .role-card-arrow,
+.role-card.active .role-card-arrow { opacity: 1; transform: translateX(0) translateZ(0); }
 
-/* Checkmark */
+/* Per-role arrow color */
+.role-card:nth-child(2):hover .role-card-arrow { color: var(--role-supplier); }
+.role-card:nth-child(3):hover .role-card-arrow { color: var(--role-logistics); }
+.role-card:nth-child(4):hover .role-card-arrow { color: var(--role-retailer); }
+.role-card:nth-child(5):hover .role-card-arrow { color: var(--role-analyst); }
+
+/* ── Checkmark — holographic 3D ─────────────────────────────────── */
 .role-card-checkmark {
-  position:absolute;top:14px;right:14px;
-  width:26px;height:26px;
-  background:linear-gradient(135deg,var(--accent-teal),var(--accent-cyan));
-  color:var(--bg-deep);border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:12px;font-weight:800;
-  box-shadow:0 0 16px rgba(34,211,238,.5),0 0 32px rgba(34,211,238,.2);
-  animation:checkPop .5s cubic-bezier(.68,-.55,.265,1.55) both;z-index:2;
+  position: absolute;
+  top: 14px; right: 14px;
+  width: 28px; height: 28px;
+  background: linear-gradient(135deg, var(--neon-blue), #ffffff 50%, var(--neon-blue));
+  color: var(--rs-bg-deep);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow:
+    0 0 20px rgba(0, 212, 255, 0.6),
+    0 0 40px rgba(0, 212, 255, 0.3),
+    0 0 80px rgba(0, 212, 255, 0.1);
+  animation: rsCheckPop3d 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  z-index: 2;
+  transform-style: preserve-3d;
 }
-@keyframes checkPop{0%{transform:scale(0) rotate(-180deg);opacity:0}70%{transform:scale(1.2) rotate(5deg)}100%{transform:scale(1) rotate(0);opacity:1}}
 
-/* ── Back Button ────────────────────────────────────────────────── */
+@keyframes rsCheckPop3d {
+  0%   { transform: scale(0) rotate(-180deg) translateZ(-20px); opacity: 0; }
+  60%  { transform: scale(1.25) rotate(10deg) translateZ(4px); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg) translateZ(0); opacity: 1; }
+}
+
+/* ── Back Button ─────────────────────────────────────────────────── */
 .role-selection-actions {
-  display:flex;justify-content:center;margin-bottom:28px;
-  animation:revealUp .8s cubic-bezier(.16,1,.3,1) .5s both;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 28px;
+  animation: rsRevealUp 0.9s cubic-bezier(0.23, 1, 0.32, 1) 0.52s both;
 }
+
 .btn-back {
-  display:inline-flex;align-items:center;gap:10px;
-  padding:13px 28px;background:transparent;
-  color:var(--text-secondary);border:1px solid var(--border);
-  border-radius:var(--radius-btn);
-  font-family:var(--font-body);font-size:15px;font-weight:600;
-  cursor:pointer;transition:all var(--t-smooth);
-  position:relative;overflow:hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 28px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--rs-text-secondary);
+  border: 1px solid var(--rs-border);
+  border-radius: var(--rs-radius-btn);
+  font-family: var(--rs-font-body);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--rs-t-smooth);
+  position: relative;
+  overflow: hidden;
+  transform-style: preserve-3d;
 }
-.btn-back::after {
-  content:'';position:absolute;top:0;left:-100%;
-  width:100%;height:100%;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);
-  transition:left .45s ease;
+
+.btn-back::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, rgba(0, 212, 255, 0.06) 50%, transparent 70%);
+  transform: translateX(-130%) skewX(-15deg);
+  transition: transform 0.5s ease;
 }
+
 .btn-back:hover {
-  background:var(--bg-card-hover);border-color:rgba(255,255,255,.18);
-  color:var(--text-primary);transform:translateY(-2px);
-  box-shadow:0 6px 20px rgba(0,0,0,.3);
+  background: rgba(0, 212, 255, 0.04);
+  border-color: rgba(0, 212, 255, 0.2);
+  color: var(--rs-text-primary);
+  transform: translateY(-3px) translateZ(4px);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(0, 212, 255, 0.08);
+  text-shadow: 0 0 12px rgba(0, 212, 255, 0.3);
 }
-.btn-back:hover::after{left:100%}
-.btn-back:active{transform:translateY(0) scale(.99)}
+.btn-back:hover::before { transform: translateX(130%) skewX(-15deg); }
+.btn-back:active { transform: translateY(1px) scale(0.99); }
 
-/* ── Footer ─────────────────────────────────────────────────────── */
-.role-selection-footer{text-align:center;animation:revealUp .8s cubic-bezier(.16,1,.3,1) .58s both}
-.footer-text{font-family:var(--font-body);font-size:13px;color:var(--text-muted)}
-.footer-link{color:var(--accent-cyan);font-weight:500;text-decoration:none;border-bottom:1px solid transparent;transition:color var(--t-snap),border-color var(--t-snap)}
-.footer-link:hover{color:#fff;border-bottom-color:var(--accent-cyan)}
+/* ── Footer ──────────────────────────────────────────────────────── */
+.role-selection-footer {
+  text-align: center;
+  animation: rsRevealUp 0.9s cubic-bezier(0.23, 1, 0.32, 1) 0.6s both;
+}
 
-/* ── Responsive ─────────────────────────────────────────────────── */
-@media(max-width:1024px){
-  .role-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px}
-  .role-card{padding:28px 20px 22px;min-height:200px}
+.footer-text {
+  font-family: var(--rs-font-body);
+  font-size: 13px;
+  color: var(--rs-text-muted);
 }
-@media(max-width:768px){
-  .role-selection-scene{padding:32px 16px}
-  .role-selection-title{font-size:30px}
-  .role-selection-subtitle{font-size:15px}
-  .role-grid{grid-template-columns:repeat(2,1fr);gap:12px}
-  .role-card{padding:24px 18px 20px;min-height:180px}
-  .role-card-icon{font-size:44px;margin-bottom:14px}
-  .btn-back{width:100%;justify-content:center}
+
+.footer-link {
+  color: var(--neon-blue);
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color var(--rs-t-snap), border-color var(--rs-t-snap), text-shadow var(--rs-t-snap);
 }
-@media(max-width:520px){
-  .role-grid{grid-template-columns:1fr;gap:10px}
-  .role-card{flex-direction:row;min-height:auto;padding:18px 20px;text-align:left;gap:16px}
-  .role-card-icon{margin-bottom:0;font-size:38px;flex-shrink:0}
-  .role-card-arrow{display:none}
+.footer-link:hover {
+  color: #ffffff;
+  border-bottom-color: var(--neon-blue);
+  text-shadow: 0 0 12px rgba(0, 212, 255, 0.4);
 }
-.role-card:focus-visible,.btn-back:focus-visible{outline:2px solid var(--accent-cyan);outline-offset:3px}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .role-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+  .role-card { padding: 28px 20px 22px; min-height: 200px; }
+  .role-card:hover { transform: translateY(-8px) rotateX(2deg); }
+}
+
+@media (max-width: 768px) {
+  .role-selection-scene { padding: 32px 16px; }
+  .role-selection-title { font-size: 30px; }
+  .role-selection-subtitle { font-size: 15px; }
+  .role-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .role-card { padding: 24px 18px 20px; min-height: 180px; }
+  .role-card-icon { font-size: 44px; margin-bottom: 14px; }
+  .btn-back { width: 100%; justify-content: center; }
+  .role-card:hover { transform: translateY(-6px); }
+  .role-selection-container { animation: rsRevealUp 0.7s cubic-bezier(0.23, 1, 0.32, 1) both; }
+}
+
+@media (max-width: 520px) {
+  .role-grid { grid-template-columns: 1fr; gap: 10px; }
+  .role-card {
+    flex-direction: row;
+    min-height: auto;
+    padding: 18px 20px;
+    text-align: left;
+    gap: 16px;
+  }
+  .role-card-icon { margin-bottom: 0; font-size: 38px; flex-shrink: 0; }
+  .role-card-arrow { display: none; }
+  .role-card:hover { transform: translateX(6px); }
+}
+
+/* Focus */
+.role-card:focus-visible,
+.btn-back:focus-visible { outline: 2px solid var(--neon-blue); outline-offset: 3px; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

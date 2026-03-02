@@ -1,4 +1,5 @@
 let gpsSocket = null
+let notificationSocket = null
 let reconnectTimer = null
 let reconnectEnabled = true
 let lastConnectOptions = null
@@ -38,6 +39,11 @@ function getLocalBackendSocketUrl() {
   return `${wsBase}/ws/gps`
 }
 
+function getLocalBackendSocketBase() {
+  const backendTarget = import.meta.env.VITE_DEV_PROXY_TARGET || 'http://127.0.0.1:8000'
+  return toSocketUrl(backendTarget).replace(/\/+$/, '')
+}
+
 function getDefaultSocketUrl() {
   if (typeof window === 'undefined') {
     return getLocalBackendSocketUrl()
@@ -53,6 +59,22 @@ function getDefaultSocketUrl() {
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   return `${protocol}//${window.location.host}/ws/gps`
+}
+
+function getDefaultSocketBase() {
+  if (typeof window === 'undefined') {
+    return getLocalBackendSocketBase()
+  }
+
+  if (import.meta.env.DEV) {
+    const host = window.location.hostname
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return getLocalBackendSocketBase()
+    }
+  }
+
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${protocol}//${window.location.host}`
 }
 
 function clearReconnectTimer() {
@@ -164,4 +186,55 @@ export function disconnectGpsSocket() {
 
 export function getGpsSocket() {
   return gpsSocket
+}
+
+export function connectNotificationSocket(userId, { onMessage, onOpen, onClose } = {}) {
+  const normalizedUser = String(userId || '').trim()
+  if (!normalizedUser) {
+    return null
+  }
+
+  if (
+    notificationSocket &&
+    (notificationSocket.readyState === WebSocket.OPEN || notificationSocket.readyState === WebSocket.CONNECTING)
+  ) {
+    return notificationSocket
+  }
+
+  const url = `${getDefaultSocketBase()}/ws/notifications/${encodeURIComponent(normalizedUser)}`
+  try {
+    notificationSocket = new WebSocket(url)
+  } catch {
+    return null
+  }
+
+  notificationSocket.addEventListener('open', (event) => {
+    if (onOpen) onOpen(event)
+  })
+
+  notificationSocket.addEventListener('message', (event) => {
+    if (onMessage) onMessage(parseSocketMessage(event.data))
+  })
+
+  notificationSocket.addEventListener('close', (event) => {
+    notificationSocket = null
+    if (onClose) onClose(event)
+  })
+
+  notificationSocket.addEventListener('error', () => {
+    try {
+      notificationSocket?.close()
+    } catch {
+      // Ignore socket close errors.
+    }
+  })
+
+  return notificationSocket
+}
+
+export function disconnectNotificationSocket() {
+  if (notificationSocket) {
+    notificationSocket.close()
+    notificationSocket = null
+  }
 }

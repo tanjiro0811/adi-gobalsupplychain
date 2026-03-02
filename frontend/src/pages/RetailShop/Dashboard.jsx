@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { inventoryApi } from '../../api/axiosInstance'
+import { dealerApi, inventoryApi } from '../../api/axiosInstance'
 import BlockchainBadge from '../../components/blockchain/BlockchainBadge'
 import PieChart from '../../components/charts/PieChart'
 import Table from '../../components/common/Table'
@@ -20,11 +20,19 @@ function RetailShopDashboard({
   const [products, setProducts] = useState([])
   const [salesData, setSalesData] = useState([])
   const [activeView, setActiveView] = useState(initialView) // overview, pos, scanner, inventory, sales
+  const [isOrdering, setIsOrdering] = useState(false)
+  const [orderMessage, setOrderMessage] = useState('')
+
+  const loadRetailData = async () => {
+    const data = await inventoryApi.getInventory()
+    setProducts(data?.products ?? [])
+    setSalesData(data?.sales ?? [])
+  }
 
   useEffect(() => {
     let mounted = true
 
-    async function loadRetailData() {
+    async function hydrate() {
       try {
         const data = await inventoryApi.getInventory()
         if (mounted) {
@@ -36,7 +44,7 @@ function RetailShopDashboard({
       }
     }
 
-    loadRetailData()
+    hydrate()
 
     return () => {
       mounted = false
@@ -72,6 +80,40 @@ function RetailShopDashboard({
     color: ['#0ea5e9', '#22c55e', '#f59e0b', '#8b5cf6', '#ef4444', '#14b8a6'][index % 6],
   })).filter((item) => item.value > 0)
 
+  const placeReplenishmentOrder = async () => {
+    const target =
+      products.find((item) => Number(item.stock || 0) <= Number(item.reorderLevel || 0)) ||
+      products[0]
+
+    if (!target) {
+      setOrderMessage('No products available to place an order.')
+      return
+    }
+
+    setIsOrdering(true)
+    setOrderMessage('')
+    try {
+      const quantity = Math.max(Number(target.reorderLevel || 20), 20)
+      const response = await dealerApi.createRetailOrder({
+        retailer_name: user?.name || 'Retail Shop',
+        retailer_email: user?.email || 'retail@globalsupply.com',
+        product_sku: target.id || target.sku,
+        quantity,
+        origin: 'Manufacturer Hub',
+        destination: 'Dealer Warehouse',
+      })
+      const orderCode = response?.order?.order_code || response?.order?.orderCode || '--'
+      const txHash = String(response?.txHash || '')
+      setOrderMessage(
+        `Order ${orderCode} placed for ${target.id || target.sku}. Blockchain tx: ${txHash.slice(0, 20)}...`
+      )
+    } catch (error) {
+      setOrderMessage(error?.message || 'Failed to place replenishment order.')
+    } finally {
+      setIsOrdering(false)
+    }
+  }
+
   return (
     <DashboardLayout
       role="RetailShop"
@@ -87,6 +129,35 @@ function RetailShopDashboard({
       {/* Overview View */}
       {activeView === 'overview' && (
         <>
+          <section style={{ marginBottom: 12 }}>
+            <div style={{ background: '#eff6ff', borderRadius: 12, padding: 14, border: '1px solid #bfdbfe' }}>
+              <h4 style={{ margin: '0 0 6px 0', color: '#1e3a8a' }}>Retail to Dealer Pipeline</h4>
+              <p style={{ margin: 0, fontSize: 13, color: '#1e40af' }}>
+                Place a restock order that flows through dealer, manufacturer, transporter, and delivery stages.
+              </p>
+              <button
+                type="button"
+                onClick={placeReplenishmentOrder}
+                disabled={isOrdering}
+                style={{
+                  marginTop: 10,
+                  border: 'none',
+                  borderRadius: 8,
+                  padding: '8px 12px',
+                  background: '#2563eb',
+                  color: '#fff',
+                  fontWeight: 600,
+                  cursor: isOrdering ? 'not-allowed' : 'pointer',
+                  opacity: isOrdering ? 0.75 : 1,
+                }}
+              >
+                {isOrdering ? 'Placing order...' : 'Place Replenishment Order'}
+              </button>
+              {!!orderMessage && (
+                <p style={{ margin: '8px 0 0 0', fontSize: 12, color: '#0f172a' }}>{orderMessage}</p>
+              )}
+            </div>
+          </section>
           <div style={{ marginBottom: 12 }}>
             <BlockchainBadge />
           </div>
@@ -119,7 +190,13 @@ function RetailShopDashboard({
       )}
 
       {/* POS View */}
-      {activeView === 'pos' && <POS products={products} />}
+      {activeView === 'pos' && (
+        <POS
+          products={products}
+          userName={user?.name}
+          onSaleComplete={loadRetailData}
+        />
+      )}
 
       {/* Scanner View */}
       {activeView === 'scanner' && <Scanner products={products} />}

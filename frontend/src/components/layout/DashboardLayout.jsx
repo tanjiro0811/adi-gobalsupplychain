@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { connectNotificationSocket, disconnectNotificationSocket } from '../../api/socket'
 import Sidebar from './Sidebar'
 import UserMenu from '../navigation/UserMenu'
 import StatCard from '../ui/StatCard'
@@ -51,6 +52,14 @@ const PATH_BY_ROLE_LINK = {
   },
 }
 
+const SOCKET_USER_BY_ROLE = {
+  Admin: 'admin',
+  Manufacturer: 'manufacturer',
+  Transporter: 'transporter',
+  Dealer: 'dealer',
+  RetailShop: 'retail_shop',
+}
+
 function getLinkForPath(role, path) {
   const linkMap = PATH_BY_ROLE_LINK[role]
   if (!linkMap || !path) {
@@ -74,6 +83,7 @@ function DashboardLayout({
   children,
 }) {
   const [activeLink, setActiveLink] = useState(() => getLinkForPath(role, currentPath))
+  const [liveNotificationCount, setLiveNotificationCount] = useState(Number(notifications || 0))
 
   const enrichedStats = useMemo(
     () =>
@@ -88,6 +98,34 @@ function DashboardLayout({
   useEffect(() => {
     setActiveLink(getLinkForPath(role, currentPath))
   }, [role, currentPath])
+
+  useEffect(() => {
+    setLiveNotificationCount(Number(notifications || 0))
+  }, [notifications])
+
+  useEffect(() => {
+    const socketUserId = SOCKET_USER_BY_ROLE[role]
+    if (!socketUserId) {
+      return undefined
+    }
+
+    connectNotificationSocket(socketUserId, {
+      onMessage: (payload) => {
+        if (!payload || typeof payload !== 'object') return
+        if (payload.type === 'notification:init' && Array.isArray(payload.items)) {
+          setLiveNotificationCount(payload.items.length)
+          return
+        }
+        if (payload.type === 'notification') {
+          setLiveNotificationCount((count) => count + 1)
+        }
+      },
+    })
+
+    return () => {
+      disconnectNotificationSocket()
+    }
+  }, [role])
 
   const handleNavigate = (link) => {
     setActiveLink(link)
@@ -110,7 +148,7 @@ function DashboardLayout({
             <h3>{role} Role accessed</h3>
             <p className="muted">Active view: {activeLink}</p>
           </div>
-          <UserMenu userName={userName} notifications={notifications} onLogout={onLogout} />
+          <UserMenu userName={userName} notifications={liveNotificationCount} onLogout={onLogout} />
         </header>
 
         <main className="dashboard-content">

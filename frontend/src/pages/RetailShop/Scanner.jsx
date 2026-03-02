@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { blockchainApi } from '../../api/axiosInstance'
 import BlockchainBadge from '../../components/blockchain/BlockchainBadge'
 
 function normalizeScanCode(value = '') {
@@ -20,6 +21,7 @@ function normalizeScannerProducts(products = []) {
     }
 
     return {
+      sku: normalizedSku,
       code: sku,
       aliases,
       name: item.name || `Product ${index + 1}`,
@@ -60,7 +62,27 @@ function Scanner({ products = [] }) {
     setTimeout(() => {
       const result = productByCode[normalizedCode]
       if (result) {
-        setScanResult(result)
+        setScanResult({ ...result, loadingBlockchain: true, qrImageUrl: '', journey: [] })
+        Promise.all([
+          blockchainApi.qr(result.sku || normalizedCode),
+          blockchainApi.journey(result.sku || normalizedCode),
+        ])
+          .then(([qrPayload, journeyPayload]) => {
+            setScanResult((prev) => ({
+              ...(prev || result),
+              loadingBlockchain: false,
+              qrImageUrl: qrPayload?.qrImageUrl || '',
+              journey: Array.isArray(journeyPayload?.journey) ? journeyPayload.journey : [],
+            }))
+          })
+          .catch(() => {
+            setScanResult((prev) => ({
+              ...(prev || result),
+              loadingBlockchain: false,
+              qrImageUrl: '',
+              journey: [],
+            }))
+          })
       } else {
         setScanResult({
           error: true,
@@ -191,6 +213,47 @@ function Scanner({ products = [] }) {
                     <p className="blockchain-text">
                       This product's authenticity has been verified on the blockchain
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {scanResult.loadingBlockchain && (
+                <p style={{ marginTop: 12, color: '#1d4ed8', fontSize: 13 }}>Loading blockchain journey...</p>
+              )}
+
+              {!scanResult.loadingBlockchain && scanResult.qrImageUrl && (
+                <div style={{ marginTop: 12 }}>
+                  <p style={{ margin: '0 0 8px 0', fontSize: 13, fontWeight: 600 }}>Product Journey QR</p>
+                  <img
+                    src={scanResult.qrImageUrl}
+                    alt={`QR for ${scanResult.name}`}
+                    style={{ width: 160, height: 160, border: '1px solid #cbd5e1', borderRadius: 8 }}
+                  />
+                </div>
+              )}
+
+              {!scanResult.loadingBlockchain && Array.isArray(scanResult.journey) && scanResult.journey.length > 0 && (
+                <div style={{ marginTop: 12 }}>
+                  <p style={{ margin: '0 0 8px 0', fontSize: 13, fontWeight: 600 }}>Journey Trail</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {scanResult.journey.map((step) => (
+                      <div
+                        key={`${step.eventStage}-${step.timestamp}`}
+                        style={{
+                          padding: 10,
+                          border: '1px solid #dbeafe',
+                          borderRadius: 8,
+                          background: '#eff6ff',
+                        }}
+                      >
+                        <p style={{ margin: 0, fontWeight: 600, color: '#1e3a8a' }}>
+                          {String(step.eventStage || '').replace(/_/g, ' ')}
+                        </p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: 12, color: '#334155' }}>
+                          tx: {String(step.txHash || '').slice(0, 18)}...
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

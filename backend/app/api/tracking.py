@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -8,8 +9,19 @@ from pydantic import BaseModel, Field
 from app.core.middleware import require_roles
 from app.models.user import UserRole
 from app.services.ai_service import predict_delay_risk
+from app.services.blockchain_service import generate_product_hash, generate_tx_hash
+from app.services.database_service import (
+    DatabaseError,
+    append_pipeline_event,
+    create_ledger_record,
+    create_or_update_shipment,
+    get_order,
+    list_shipments,
+    record_shipment_event,
+    update_order_stage,
+    update_shipment_location,
+)
 from app.services.notification_service import notification_service
-from app.services.state_service import shipments
 
 router = APIRouter(prefix="/tracking", tags=["tracking"])
 
@@ -19,6 +31,11 @@ class ShipmentCreateRequest(BaseModel):
     lat: float = Field(ge=-90, le=90)
     lng: float = Field(ge=-180, le=180)
     status: str = "created"
+    order_code: Optional[str] = None
+    origin: Optional[str] = None
+    destination: Optional[str] = None
+    eta: Optional[str] = None
+    vehicle_number: Optional[str] = None
 
 
 class ShipmentLocationUpdateRequest(BaseModel):
@@ -33,8 +50,15 @@ class DelayRiskRequest(BaseModel):
     traffic_score: float = Field(ge=0, le=1)
 
 
+class OrderStageUpdateRequest(BaseModel):
+    stage: str = Field(pattern=r"^[a-z_]+$")
+    shipment_id: Optional[str] = None
+    lat: Optional[float] = Field(default=None, ge=-90, le=90)
+    lng: Optional[float] = Field(default=None, ge=-180, le=180)
+
+
 def get_shipments_snapshot() -> dict:
-    return shipments
+    return list_shipments()
 
 
 def _trend_labels(points: int) -> list[str]:
@@ -47,7 +71,7 @@ def _status_text(value: object) -> str:
     return str(value or "unknown").replace("_", " ").strip().lower()
 
 
-def _as_float(value: object) -> float | None:
+def _as_float(value: object) -> Optional[float]:
     try:
         parsed = float(value)
     except (TypeError, ValueError):
@@ -231,43 +255,128 @@ def get_tracking_socket_payload(time_range: str = "7d") -> dict:
 
 @router.post("/shipments", dependencies=[Depends(require_roles(UserRole.admin, UserRole.manufacturer, UserRole.dealer))])
 def create_shipment(data: ShipmentCreateRequest) -> dict:
-    if data.shipment_id in shipments:
-        raise HTTPException(status_code=409, detail="Shipment ID already exists")
-
-    shipments[data.shipment_id] = {
-        "lat": data.lat,
-        "lng": data.lng,
-        "status": data.status,
-    }
-    return {"shipment_id": data.shipment_id, **shipments[data.shipment_id]}
+    try:
+        item = create_or_update_shipment(
+            shipment_id=data.shipment_id,
+            order_code=data.order_code,
+            lat=data.lat,
+            lng=data.lng,
+            status=data.status,
+            origin=data.origin,
+            destination=data.destination,
+            eta=data.eta,
+            vehicle_number=data.vehicle_number,
+            assignment_status="Assigned",
+        )
+    except DatabaseError as exc:
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable") from exc
+    return {"shipment_id": data.shipment_id, **item}
 
 
 @router.patch("/shipments/{shipment_id}", dependencies=[Depends(require_roles(UserRole.admin, UserRole.transporter))])
-def update_shipment_location(shipment_id: str, data: ShipmentLocationUpdateRequest) -> dict:
-    shipment = shipments.get(shipment_id)
+def patch_shipment_location(shipment_id: str, data: ShipmentLocationUpdateRequest) -> dict:
+    try:
+        shipment = update_shipment_location(
+            shipment_id=shipment_id,
+            lat=data.lat,
+            lng=data.lng,
+            status=data.status,
+        )
+    except DatabaseError as exc:
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable") from exc
+
     if shipment is None:
         raise HTTPException(status_code=404, detail="Shipment not found")
 
-    shipment.update({"lat": data.lat, "lng": data.lng, "status": data.status})
     notification_service.publish(
-        user_id="tracking",
-        title="Shipment updated",
-        message=f"Shipment {shipment_id} is now {data.status}",
+        user_id="dealer",
+        title="Shipment GPS update",
+        message=f"{shipment_id} updated to {data.status}.",
+        metadata={"shipmentId": shipment_id, "lat": data.lat, "lng": data.lng},
     )
     return {"shipment_id": shipment_id, **shipment}
 
 
+@router.patch("/orders/{order_code}/stage", dependencies=[Depends(require_roles(UserRole.admin, UserRole.transporter, UserRole.dealer))])
+def update_order_stage_from_tracking(order_code: str, data: OrderStageUpdateRequest) -> dict:
+    order = get_order(order_code)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    shipment_id = data.shipment_id or order.get("shipment_id")
+    payload = {
+        "orderCode": order_code,
+        "stage": data.stage,
+        "shipmentId": shipment_id,
+        "lat": data.lat,
+        "lng": data.lng,
+    }
+    tx_hash = generate_tx_hash(payload)
+    ledger_hash = generate_product_hash(
+        product_id=str(order.get("product_sku")),
+        batch_id=str(order.get("batch_id") or "NA"),
+        payload=payload,
+    )
+
+    try:
+        updated_order = update_order_stage(
+            order_code,
+            stage=data.stage,
+            status=data.stage,
+            shipment_id=shipment_id,
+            dealer_received=data.stage == "dealer_received",
+            retail_received=data.stage == "retail_received",
+        )
+        create_ledger_record(
+            product_id=str(order.get("product_sku")),
+            batch_id=str(order.get("batch_id") or "NA"),
+            event_stage=data.stage,
+            payload=payload,
+            ledger_hash=ledger_hash,
+            tx_hash=tx_hash,
+        )
+        append_pipeline_event(
+            order_code=order_code,
+            product_sku=str(order.get("product_sku")),
+            stage=data.stage,
+            tx_hash=tx_hash,
+            payload=payload,
+            shipment_id=shipment_id,
+            lat=data.lat,
+            lng=data.lng,
+        )
+
+        if shipment_id and data.lat is not None and data.lng is not None:
+            update_shipment_location(
+                shipment_id=shipment_id,
+                lat=data.lat,
+                lng=data.lng,
+                status=data.stage,
+            )
+    except DatabaseError as exc:
+        raise HTTPException(status_code=503, detail="Database temporarily unavailable") from exc
+
+    if data.stage in {"in_transit", "dealer_received", "retail_received"}:
+        target = "dealer" if data.stage != "retail_received" else "retail_shop"
+        notification_service.publish(
+            user_id=target,
+            title=f"Order stage: {data.stage.replace('_', ' ').title()}",
+            message=f"{order_code} is now {data.stage.replace('_', ' ')}.",
+            metadata={"orderCode": order_code, "txHash": tx_hash},
+        )
+
+    return {"order": updated_order, "txHash": tx_hash}
+
+
 @router.get("/live-gps", dependencies=[Depends(require_roles(UserRole.admin, UserRole.transporter, UserRole.dealer, UserRole.retail_shop))])
 def get_live_gps() -> dict:
-    return {"shipments": shipments}
+    return {"shipments": get_shipments_snapshot()}
 
 
 @router.get("/map", dependencies=[Depends(require_roles(UserRole.admin, UserRole.transporter, UserRole.dealer, UserRole.retail_shop))])
 def get_map_data() -> dict:
-    points = [
-        {"shipment_id": shipment_id, **data}
-        for shipment_id, data in shipments.items()
-    ]
+    snapshot = get_shipments_snapshot()
+    points = [{"shipment_id": shipment_id, **data} for shipment_id, data in snapshot.items()]
     return {"center": {"lat": 20.5937, "lng": 78.9629}, "points": points}
 
 
@@ -286,4 +395,4 @@ def ai_delay_risk(data: DelayRiskRequest) -> dict:
     dependencies=[Depends(require_roles(UserRole.admin, UserRole.transporter, UserRole.dealer, UserRole.retail_shop))],
 )
 def tracking_analytics(time_range: str = Query("7d", alias="range")) -> dict:
-    return build_tracking_analytics_snapshot(shipments, time_range=time_range)
+    return build_tracking_analytics_snapshot(get_shipments_snapshot(), time_range=time_range)

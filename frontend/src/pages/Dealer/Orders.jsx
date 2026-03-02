@@ -1,152 +1,177 @@
 import { useEffect, useMemo, useState } from 'react'
-import { dealerApi } from '../../api/axiosInstance'
-import StatusDonut from '../../components/charts/StatusDonut'
+import { dealerApi, manufacturerApi, trackingApi } from '../../api/axiosInstance'
 import Table from '../../components/common/Table'
 import Loader from '../../components/common/Loader'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import './dealer.css'
 
-function mapShipmentStatus(status) {
-  const normalized = String(status || '').toLowerCase()
-  if (normalized.includes('delay')) return 'Delayed'
-  if (normalized.includes('arriv')) return 'Arriving Today'
-  if (normalized.includes('receiv') || normalized.includes('deliver')) return 'Received'
-  return 'In Transit'
-}
-
-function normalizeShipments(items = []) {
-  return items.map((shipment, index) => {
-    const status = mapShipmentStatus(shipment.status)
-    const fallbackProgress =
-      status === 'Arriving Today' ? 95 : status === 'Delayed' ? 35 : status === 'Received' ? 100 : 70
-
-    const parsedProgress = Number(shipment.progress)
-    const progress = Number.isFinite(parsedProgress)
-      ? Math.max(0, Math.min(100, parsedProgress))
-      : fallbackProgress
-
-    return {
-      id: shipment.id || index + 1,
-      shipmentId: shipment.shipmentId || `SHP-${index + 1}`,
-      orderId: shipment.orderId || `DL-${3300 + index + 1}`,
-      manufacturer: shipment.manufacturer || 'Global Supply Manufacturer',
-      carrier: shipment.carrier || 'Prime Logistics',
-      origin: shipment.origin || 'Origin unavailable',
-      destination: shipment.destination || 'Destination unavailable',
-      status,
-      estimatedArrival: shipment.estimatedArrival || shipment.eta || new Date().toISOString().slice(0, 10),
-      currentLocation: shipment.currentLocation || `${shipment.lat ?? '--'}, ${shipment.lng ?? '--'}`,
-      progress,
-      blockchainVerified: shipment.blockchainVerified ?? shipment.verified ?? true,
-      items: Number(shipment.items || shipment.quantity || 0),
-    }
-  })
-}
-
-function formatDate(value) {
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? '--' : date.toLocaleDateString()
+function formatStage(stage) {
+  return String(stage || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
 function Orders({ user, onLogout, onNavigate, currentPath }) {
-  const [shipments, setShipments] = useState([])
   const [loading, setLoading] = useState(true)
-  const [filterStatus, setFilterStatus] = useState('all')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedShipment, setSelectedShipment] = useState(null)
+  const [items, setItems] = useState([])
+  const [busyOrder, setBusyOrder] = useState('')
+  const [errorMessage, setErrorMessage] = useState('')
+  const [actionMessage, setActionMessage] = useState('')
+
+  const loadOrders = async () => {
+    const response = await dealerApi.pipelineOrders()
+    setItems(Array.isArray(response?.items) ? response.items : [])
+  }
 
   useEffect(() => {
     let mounted = true
-
-    async function loadShipments() {
+    async function hydrate() {
       try {
-        const response = await dealerApi.arrivals()
+        const response = await dealerApi.pipelineOrders()
         if (mounted) {
-          setShipments(normalizeShipments(response?.shipments || []))
+          setItems(Array.isArray(response?.items) ? response.items : [])
         }
       } catch (error) {
-        console.error('Error loading shipments:', error)
-        if (mounted) setShipments([])
+        if (mounted) setErrorMessage(error?.message || 'Failed to load pipeline orders')
       } finally {
         if (mounted) setLoading(false)
       }
     }
-
-    loadShipments()
-    const interval = setInterval(loadShipments, 30000)
-
+    hydrate()
     return () => {
       mounted = false
-      clearInterval(interval)
     }
   }, [])
 
-  const shipmentStatusData = useMemo(() => [
-    { label: 'In Transit', value: shipments.filter((s) => s.status === 'In Transit').length, color: '#3b82f6' },
-    { label: 'Arriving Today', value: shipments.filter((s) => s.status === 'Arriving Today').length, color: '#22c55e' },
-    { label: 'Delayed', value: shipments.filter((s) => s.status === 'Delayed').length, color: '#ef4444' },
-  ], [shipments])
-
-  const stats = useMemo(() => {
-    const received = shipments.filter((s) => s.status === 'Received').length
-    return [
-      { label: 'In Transit', value: shipmentStatusData[0].value, trend: 'Live' },
-      { label: 'Arriving Today', value: shipmentStatusData[1].value, trend: 'Live ETA' },
-      { label: 'Delayed', value: shipmentStatusData[2].value, trend: 'Needs attention' },
-      { label: 'Received', value: received, trend: 'Completed' },
-    ]
-  }, [shipmentStatusData, shipments])
-
-  const filteredShipments = useMemo(() => {
-    return shipments.filter((shipment) => {
-      const matchesStatus = filterStatus === 'all' || shipment.status === filterStatus
-      const target = `${shipment.shipmentId} ${shipment.orderId} ${shipment.manufacturer}`.toLowerCase()
-      const matchesSearch = !searchTerm || target.includes(searchTerm.toLowerCase())
-      return matchesStatus && matchesSearch
-    })
-  }, [shipments, filterStatus, searchTerm])
-
-  const getStatusBadge = (status) => {
-    const styles = {
-      'In Transit': { bg: '#dbeafe', color: '#1e40af' },
-      'Arriving Today': { bg: '#dcfce7', color: '#166534' },
-      Delayed: { bg: '#fee2e2', color: '#991b1b' },
-      Received: { bg: '#f3f4f6', color: '#4b5563' },
+  const runAction = async (order, action) => {
+    if (!order?.orderCode) return
+    setBusyOrder(order.orderCode)
+    setErrorMessage('')
+    setActionMessage('')
+    try {
+      let response = null
+      if (action === 'confirm') {
+        response = await dealerApi.confirmOrder(order.orderCode)
+      } else if (action === 'forward') {
+        response = await dealerApi.forwardOrderToManufacturer(order.orderCode, { manufacturer_id: 'manufacturer' })
+      } else if (action === 'create_batch') {
+        response = await manufacturerApi.createBatchForOrder(order.orderCode, {
+          product_sku: order.productSku,
+          quantity: order.quantity,
+        })
+      } else if (action === 'assign_transporter') {
+        response = await manufacturerApi.assignTransporter(order.orderCode, {
+          transporter_id: 'transporter',
+          shipment_id: order.shipmentId || `SHP-${order.orderCode.replace(/\D/g, '').padStart(4, '0')}`,
+          origin: order.origin || 'Manufacturer Hub',
+          destination: order.destination || 'Dealer Warehouse',
+          eta: new Date(Date.now() + 1000 * 60 * 60 * 2).toISOString(),
+          vehicle_number: 'MH12AB4321',
+          lat: 18.5204,
+          lng: 73.8567,
+        })
+      } else if (action === 'in_transit') {
+        response = await trackingApi.updateOrderStage(order.orderCode, {
+          stage: 'in_transit',
+          shipment_id: order.shipmentId,
+          lat: 18.6204,
+          lng: 74.0567,
+        })
+      } else if (action === 'dealer_receive') {
+        response = await dealerApi.receiveOrder(order.orderCode)
+      } else if (action === 'retail_receive') {
+        response = await dealerApi.retailReceiveOrder(order.orderCode)
+      }
+      const hashes = [
+        response?.txHash,
+        response?.dispatchTxHash,
+        response?.deliveredTxHash,
+      ].filter(Boolean)
+      if (hashes.length) {
+        setActionMessage(
+          `Order ${order.orderCode} updated. tx: ${hashes.map((hash) => String(hash).slice(0, 16)).join(', ')}...`
+        )
+      }
+      await loadOrders()
+    } catch (error) {
+      setErrorMessage(error?.message || 'Action failed')
+    } finally {
+      setBusyOrder('')
     }
-
-    const style = styles[status] || styles['In Transit']
-    return (
-      <span
-        style={{
-          padding: '4px 12px',
-          borderRadius: 9999,
-          fontSize: 12,
-          fontWeight: 600,
-          background: style.bg,
-          color: style.color,
-        }}
-      >
-        {status}
-      </span>
-    )
   }
 
-  const shipmentRows = filteredShipments.map((shipment) => ({
-    shipmentId: (
-      <span
-        style={{ fontWeight: 600, color: '#3b82f6', cursor: 'pointer' }}
-        onClick={() => setSelectedShipment(shipment)}
-      >
-        {shipment.shipmentId}
-      </span>
-    ),
-    orderId: shipment.orderId,
-    manufacturer: shipment.manufacturer,
-    route: `${shipment.origin} -> ${shipment.destination}`,
-    currentLocation: shipment.currentLocation,
-    eta: formatDate(shipment.estimatedArrival),
-    status: getStatusBadge(shipment.status),
-  }))
+  const stats = useMemo(() => {
+    const stageCounts = items.reduce((acc, item) => {
+      const stage = String(item.currentStage || 'unknown')
+      acc[stage] = (acc[stage] || 0) + 1
+      return acc
+    }, {})
+    return [
+      { label: 'Pipeline Orders', value: items.length, trend: 'Live' },
+      { label: 'Awaiting Dealer', value: stageCounts.retail_ordered || 0, trend: 'Confirm pending' },
+      { label: 'Manufacturer Work', value: stageCounts.dealer_ordered_manufacturer || 0, trend: 'Batch pending' },
+      { label: 'In Transit', value: stageCounts.in_transit || 0, trend: 'GPS-linked' },
+      { label: 'Delivered to Retail', value: stageCounts.retail_received || 0, trend: 'Completed' },
+    ]
+  }, [items])
+
+  const rows = items.map((item) => {
+    const stage = String(item.currentStage || '')
+    let actionLabel = 'Completed'
+    let actionKey = ''
+
+    if (stage === 'retail_ordered') {
+      actionLabel = 'Confirm'
+      actionKey = 'confirm'
+    } else if (stage === 'dealer_confirmed') {
+      actionLabel = 'Order Manufacturer'
+      actionKey = 'forward'
+    } else if (stage === 'dealer_ordered_manufacturer') {
+      actionLabel = 'Create Batch'
+      actionKey = 'create_batch'
+    } else if (stage === 'manufacturer_batch_created') {
+      actionLabel = 'Assign Transporter'
+      actionKey = 'assign_transporter'
+    } else if (stage === 'transporter_assigned') {
+      actionLabel = 'Mark In Transit'
+      actionKey = 'in_transit'
+    } else if (stage === 'in_transit') {
+      actionLabel = 'Dealer Receive'
+      actionKey = 'dealer_receive'
+    } else if (stage === 'dealer_received') {
+      actionLabel = 'Retail Receive'
+      actionKey = 'retail_receive'
+    }
+
+    return {
+      orderCode: <span style={{ fontWeight: 700, color: '#1e40af' }}>{item.orderCode}</span>,
+      retailer: item.retailer,
+      product: `${item.productSku} x ${item.quantity}`,
+      stage: <span className="assignment-chip assigned">{formatStage(item.currentStage)}</span>,
+      shipment: item.shipmentId || '--',
+      txReady: item.batchId ? 'Yes' : 'Pending',
+      action: actionKey ? (
+        <button
+          type="button"
+          onClick={() => runAction(item, actionKey)}
+          disabled={busyOrder === item.orderCode}
+          style={{
+            padding: '6px 10px',
+            borderRadius: 8,
+            border: 'none',
+            background: '#2563eb',
+            color: '#fff',
+            cursor: busyOrder === item.orderCode ? 'not-allowed' : 'pointer',
+            fontSize: 12,
+            fontWeight: 600,
+            opacity: busyOrder === item.orderCode ? 0.7 : 1,
+          }}
+        >
+          {busyOrder === item.orderCode ? 'Working...' : actionLabel}
+        </button>
+      ) : (
+        <span className="tracking-chip live">Done</span>
+      ),
+    }
+  })
 
   if (loading) {
     return (
@@ -159,7 +184,7 @@ function Orders({ user, onLogout, onNavigate, currentPath }) {
         currentPath={currentPath}
         stats={stats}
       >
-        <Loader label="Loading shipments..." />
+        <Loader label="Loading pipeline orders..." />
       </DashboardLayout>
     )
   }
@@ -174,223 +199,40 @@ function Orders({ user, onLogout, onNavigate, currentPath }) {
       currentPath={currentPath}
       stats={stats}
     >
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 24, fontWeight: 'bold', margin: 0 }}>Inbound Shipments</h2>
-        <p style={{ color: '#6b7280', margin: '4px 0 0 0' }}>Track and manage incoming deliveries</p>
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ fontSize: 24, margin: 0 }}>End-to-End Order Pipeline</h2>
+        <p style={{ color: '#6b7280', margin: '4px 0 0 0' }}>
+          Retail {'>'} Dealer {'>'} Manufacturer {'>'} Transporter {'>'} Dealer {'>'} Retail
+        </p>
       </div>
 
-      <section style={{ display: 'grid', gap: 24, gridTemplateColumns: '2fr 1fr', marginBottom: 24 }}>
-        <div style={{ background: 'white', borderRadius: 12, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8 }}>
-                Search Shipments
-              </label>
-              <input
-                type="text"
-                placeholder="Search by Shipment ID, Order ID, or Manufacturer..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8 }}>
-                Filter Status
-              </label>
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  border: '1px solid #d1d5db',
-                  borderRadius: 8,
-                  fontSize: 14,
-                }}
-              >
-                <option value="all">All Status</option>
-                <option value="In Transit">In Transit</option>
-                <option value="Arriving Today">Arriving Today</option>
-                <option value="Delayed">Delayed</option>
-                <option value="Received">Received</option>
-              </select>
-            </div>
-          </div>
-          <p style={{ fontSize: 14, color: '#6b7280', margin: '16px 0 0 0' }}>
-            Showing {filteredShipments.length} of {shipments.length} shipments
-          </p>
-        </div>
-
-        <div style={{ background: 'white', borderRadius: 12, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-          <StatusDonut data={shipmentStatusData} height={200} />
-          <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {shipmentStatusData.map((item) => (
-              <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 12, height: 12, borderRadius: '50%', background: item.color }} />
-                  <span>{item.label}</span>
-                </div>
-                <span style={{ fontWeight: 600 }}>{item.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <div style={{ background: 'white', borderRadius: 12, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-        <Table
-          columns={[
-            { key: 'shipmentId', label: 'Shipment ID' },
-            { key: 'orderId', label: 'Order ID' },
-            { key: 'manufacturer', label: 'Manufacturer' },
-            { key: 'route', label: 'Route' },
-            { key: 'currentLocation', label: 'Current Location' },
-            { key: 'eta', label: 'ETA' },
-            { key: 'status', label: 'Status' },
-          ]}
-          rows={shipmentRows}
-          emptyMessage="No shipments found"
-        />
-      </div>
-
-      {selectedShipment && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 50,
-          }}
-          onClick={() => setSelectedShipment(null)}
-        >
-          <div
-            style={{
-              background: 'white',
-              borderRadius: 12,
-              padding: 24,
-              maxWidth: 700,
-              width: '90%',
-              maxHeight: '90vh',
-              overflow: 'auto',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-              <h3 style={{ fontSize: 20, fontWeight: 'bold', margin: 0 }}>Shipment Tracking</h3>
-              <button
-                onClick={() => setSelectedShipment(null)}
-                style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer' }}
-              >
-                x
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <p style={{ fontSize: 14, color: '#6b7280', margin: '0 0 4px 0' }}>Shipment ID</p>
-                  <p style={{ fontWeight: 600, fontSize: 16, margin: 0 }}>{selectedShipment.shipmentId}</p>
-                </div>
-                <div>
-                  <p style={{ fontSize: 14, color: '#6b7280', margin: '0 0 4px 0' }}>Order ID</p>
-                  <p style={{ fontWeight: 600, fontSize: 16, margin: 0 }}>{selectedShipment.orderId}</p>
-                </div>
-              </div>
-
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontSize: 14, color: '#6b7280' }}>Status</span>
-                  {getStatusBadge(selectedShipment.status)}
-                </div>
-                <div style={{ width: '100%', height: 8, background: '#e5e7eb', borderRadius: 9999, overflow: 'hidden' }}>
-                  <div
-                    style={{
-                      width: `${selectedShipment.progress}%`,
-                      height: '100%',
-                      background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)',
-                      borderRadius: 9999,
-                      transition: 'width 0.5s ease',
-                    }}
-                  />
-                </div>
-                <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0 0', textAlign: 'right' }}>
-                  {selectedShipment.progress}% Complete
-                </p>
-              </div>
-
-              <div>
-                <p style={{ fontSize: 14, fontWeight: 600, color: '#374151', margin: '0 0 12px 0' }}>
-                  Route Information
-                </p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, background: '#f9fafb', borderRadius: 8 }}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px 0' }}>Origin</p>
-                    <p style={{ fontWeight: 600, margin: 0 }}>{selectedShipment.origin}</p>
-                  </div>
-                  <div style={{ fontSize: 24, color: '#3b82f6' }}>-&gt;</div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px 0' }}>Current Location</p>
-                    <p style={{ fontWeight: 600, margin: 0 }}>{selectedShipment.currentLocation}</p>
-                  </div>
-                  <div style={{ fontSize: 24, color: '#3b82f6' }}>-&gt;</div>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px 0' }}>Destination</p>
-                    <p style={{ fontWeight: 600, margin: 0 }}>{selectedShipment.destination}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <p style={{ fontSize: 14, color: '#6b7280', margin: '0 0 4px 0' }}>Manufacturer</p>
-                  <p style={{ fontWeight: 600, margin: 0 }}>{selectedShipment.manufacturer}</p>
-                </div>
-                <div>
-                  <p style={{ fontSize: 14, color: '#6b7280', margin: '0 0 4px 0' }}>Carrier</p>
-                  <p style={{ fontWeight: 600, margin: 0 }}>{selectedShipment.carrier}</p>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div>
-                  <p style={{ fontSize: 14, color: '#6b7280', margin: '0 0 4px 0' }}>Items</p>
-                  <p style={{ fontWeight: 600, margin: 0 }}>{selectedShipment.items} units</p>
-                </div>
-                <div>
-                  <p style={{ fontSize: 14, color: '#6b7280', margin: '0 0 4px 0' }}>Estimated Arrival</p>
-                  <p style={{ fontWeight: 600, margin: 0 }}>{formatDate(selectedShipment.estimatedArrival)}</p>
-                </div>
-              </div>
-
-              <div>
-                <p style={{ fontSize: 14, color: '#6b7280', margin: '0 0 4px 0' }}>Blockchain Verification</p>
-                <span
-                  style={{
-                    padding: '4px 12px',
-                    borderRadius: 9999,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    background: selectedShipment.blockchainVerified ? '#dcfce7' : '#fee2e2',
-                    color: selectedShipment.blockchainVerified ? '#166534' : '#991b1b',
-                  }}
-                >
-                  {selectedShipment.blockchainVerified ? 'Verified on Blockchain' : 'Not Verified'}
-                </span>
-              </div>
-            </div>
-          </div>
+      {errorMessage && (
+        <div style={{ marginBottom: 16, padding: 12, borderRadius: 8, background: '#fee2e2', color: '#991b1b' }}>
+          {errorMessage}
         </div>
       )}
+
+      {actionMessage && (
+        <div style={{ marginBottom: 16, padding: 12, borderRadius: 8, background: '#eff6ff', color: '#1d4ed8' }}>
+          {actionMessage}
+        </div>
+      )}
+
+      <div style={{ background: '#fff', borderRadius: 12, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <Table
+          columns={[
+            { key: 'orderCode', label: 'Order' },
+            { key: 'retailer', label: 'Retailer' },
+            { key: 'product', label: 'Product' },
+            { key: 'stage', label: 'Current Stage' },
+            { key: 'shipment', label: 'Shipment ID' },
+            { key: 'txReady', label: 'Blockchain Trail' },
+            { key: 'action', label: 'Next Action' },
+          ]}
+          rows={rows}
+          emptyMessage="No pipeline orders"
+        />
+      </div>
     </DashboardLayout>
   )
 }

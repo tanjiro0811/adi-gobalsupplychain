@@ -30,9 +30,9 @@ Global Supply  Chain project/
 
 - Frontend: React 19, Vite
 - Backend: FastAPI, Uvicorn, python-jose
-- Database: SQLite (default), MySQL URL config placeholder
+- Database: SQLite (default) or PostgreSQL via `DATABASE_URL` (Render-ready)
 - Auth: JWT bearer tokens + OTP email verification
-- Realtime: WebSocket GPS feed (`/ws/gps`)
+- Realtime: WebSocket GPS feed (`/ws/gps`) + notifications (`/ws/notifications/{userId}`)
 
 ## Prerequisites
 
@@ -115,7 +115,10 @@ Frontend uses Vite proxy to call backend (`/api` and `/ws` -> `http://localhost:
 - `SECRET_KEY`
 - `JWT_ALGORITHM` (default: `HS256`)
 - `ACCESS_TOKEN_EXPIRE_MINUTES` (default: `60`)
+- `DATABASE_URL` (preferred in production, e.g. Render PostgreSQL URL)
 - `SQLITE_DB_PATH` (default: `data/app.db`)
+- `BLOCKCHAIN_SALT` (hash salt for ledger signatures)
+- `GEMINI_API_KEY` (for AI integrations)
 - `MOCK_EMAIL_DELIVERY` (default: `true` in development)
 - `SMTP_SERVER`, `SMTP_PORT`, `SENDER_EMAIL`, `SENDER_PASSWORD`, `SENDER_NAME`
 
@@ -124,6 +127,20 @@ Frontend uses Vite proxy to call backend (`/api` and `/ws` -> `http://localhost:
 - `VITE_API_BASE_URL` (default: `/api`)
 - `VITE_GPS_SOCKET_URL` (default: browser host + `/ws/gps`)
 - `VITE_DEV_PROXY_TARGET` (default in Vite config: `http://localhost:8000`)
+
+### Secrets and `.env`
+
+- Put sensitive keys in `.env` (example: `GEMINI_API_KEY=...`).
+- `.env` is ignored by git (`.gitignore` includes `.env` and `.env.*`).
+- Use `.env.example` files for safe placeholders only.
+
+### Render PostgreSQL Setup
+
+1. Create a free PostgreSQL service in Render.
+2. Copy the internal/external database URL from Render.
+3. Set backend environment variable `DATABASE_URL` to that URL.
+4. Keep `SQLITE_DB_PATH` only as local fallback.
+5. Restart the backend service. On startup, tables are auto-created via SQLAlchemy.
 
 ## Full Stack Run Order
 
@@ -161,6 +178,14 @@ Default DB file:
 Tables created automatically on startup:
 - `users`
 - `guest_entries`
+- `products`
+- `batches`
+- `orders`
+- `shipments`
+- `shipment_events`
+- `ledger_records`
+- `sales_history`
+- `notifications`
 
 Signup writes to `users`.
 Guest form writes to `guest_entries`.
@@ -181,9 +206,10 @@ For local testing:
 
 - `auth`: login/signup/otp/guest entry
 - `admin`: stats, analytics, blockchain monitor, report generation
-- `manufacturer`: products, batches, AI forecast
-- `tracking`: live GPS, map, delay risk
-- `dealer`: orders, trends, inventory, arrivals, analytics
+- `manufacturer`: products, batches, order->batch transition, transporter assignment, AI forecast
+- `tracking`: live GPS, map, delay risk, order stage updates
+- `dealer`: full order pipeline, trends, inventory, arrivals, AI reorder recommendations
+- `blockchain`: tx hash trail, product journey, QR payload endpoint
 - `inventory`: retail/dealer/manufacturer inventory snapshot
 
 ## Dashboard Function Map
@@ -211,6 +237,8 @@ Dashboard pages and the API functions they use:
   - `trackingApi.liveGps()`
   - `trackingApi.analytics(range)`
   - WebSocket stream: `/ws/gps`
+- `All dashboards`
+  - WebSocket notifications: `/ws/notifications/{userId}`
 
 - `Dealer Dashboard` (`frontend/src/pages/Dealer/Dashboard.jsx`)
   - `dealerApi.recentOrders()`

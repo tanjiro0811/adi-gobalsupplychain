@@ -1,7 +1,7 @@
 /* ================================================================
-   SIGNUP.CSS — DEEP SPACE · PLASMA ELECTRIC THEME
+   SIGNUP.CSS — DEEP VOID · 3D PLASMA ELECTRIC THEME
    Fonts: Bebas Neue (display) + DM Sans (body)
-   Palette: Void black · Electric cyan · Violet plasma · Neon white
+   Palette: Absolute void · Electric cyan · Violet plasma · Neon white
    ================================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap');
@@ -11,66 +11,75 @@
    ================================================================ */
 
 :root {
-  /* Backgrounds */
-  --su-bg-void:          #020408;
-  --su-bg-surface:       rgba(0, 240, 255, 0.028);
-  --su-bg-surface-alt:   rgba(0, 240, 255, 0.055);
-  --su-bg-input:         rgba(0, 220, 255, 0.045);
-  --su-bg-input-focus:   rgba(0, 220, 255, 0.08);
+  /* Backgrounds — deeper, more void */
+  --su-bg-void:          #000204;
+  --su-bg-surface:       rgba(0, 240, 255, 0.018);
+  --su-bg-surface-alt:   rgba(0, 240, 255, 0.038);
+  --su-bg-input:         rgba(0, 220, 255, 0.032);
+  --su-bg-input-focus:   rgba(0, 220, 255, 0.065);
 
   /* Cyan plasma accent */
   --su-cyan:             #00f0ff;
   --su-cyan-mid:         #00c8d7;
   --su-cyan-dim:         rgba(0, 240, 255, 0.35);
-  --su-cyan-glow:        rgba(0, 240, 255, 0.16);
-  --su-cyan-border:      rgba(0, 240, 255, 0.38);
+  --su-cyan-glow:        rgba(0, 240, 255, 0.18);
+  --su-cyan-border:      rgba(0, 240, 255, 0.42);
 
   /* Violet accent */
   --su-violet:           #b44fff;
   --su-violet-dim:       rgba(180, 79, 255, 0.3);
-  --su-violet-glow:      rgba(180, 79, 255, 0.14);
+  --su-violet-glow:      rgba(180, 79, 255, 0.16);
+
+  /* Deep blue accent */
+  --su-deep-blue:        #0033ff;
+  --su-deep-blue-glow:   rgba(0, 51, 255, 0.15);
 
   /* Semantic */
   --su-success:          #00f5a0;
-  --su-success-bg:       rgba(0, 245, 160, 0.08);
-  --su-success-border:   rgba(0, 245, 160, 0.22);
+  --su-success-bg:       rgba(0, 245, 160, 0.07);
+  --su-success-border:   rgba(0, 245, 160, 0.2);
   --su-error:            #ff4d6d;
-  --su-error-bg:         rgba(255, 77, 109, 0.09);
-  --su-error-border:     rgba(255, 77, 109, 0.28);
+  --su-error-bg:         rgba(255, 77, 109, 0.07);
+  --su-error-border:     rgba(255, 77, 109, 0.25);
 
   /* Text */
   --su-text-bright:      #e8f4ff;
-  --su-text-mid:         rgba(180, 215, 240, 0.65);
-  --su-text-dim:         rgba(130, 170, 200, 0.4);
-  --su-text-label:       rgba(0, 240, 255, 0.7);
+  --su-text-mid:         rgba(180, 215, 240, 0.6);
+  --su-text-dim:         rgba(100, 150, 180, 0.38);
+  --su-text-label:       rgba(0, 240, 255, 0.65);
 
   /* Borders */
-  --su-border-faint:     rgba(0, 240, 255, 0.07);
-  --su-border-mid:       rgba(0, 240, 255, 0.15);
+  --su-border-faint:     rgba(0, 240, 255, 0.055);
+  --su-border-mid:       rgba(0, 240, 255, 0.13);
 
   /* Geometry */
-  --su-radius-panel:     24px;
+  --su-radius-panel:     28px;
   --su-radius-input:     10px;
   --su-radius-btn:       10px;
   --su-radius-otp:       12px;
 
   /* Shadows */
   --su-shadow-panel:
-    0 0 0 1px rgba(0, 240, 255, 0.07) inset,
-    0 40px 100px rgba(0, 0, 0, 0.85),
-    0 0 80px rgba(0, 240, 255, 0.04);
+    0 0 0 1px rgba(0, 240, 255, 0.055) inset,
+    0 50px 120px rgba(0, 0, 0, 0.95),
+    0 0 100px rgba(0, 240, 255, 0.035),
+    0 0 200px rgba(0, 0, 0, 0.8);
   --su-shadow-input:
-    0 2px 12px rgba(0, 0, 0, 0.4),
-    0 0 0 1px rgba(0, 240, 255, 0.04) inset;
+    0 2px 12px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(0, 240, 255, 0.03) inset;
   --su-shadow-btn:
-    0 0 24px rgba(0, 240, 255, 0.22),
-    0 4px 16px rgba(0, 0, 0, 0.5);
+    0 0 28px rgba(0, 240, 255, 0.24),
+    0 4px 20px rgba(0, 0, 0, 0.6);
+
+  /* 3D perspective */
+  --su-perspective: 1200px;
 
   /* Transitions */
-  --su-t-snap:    0.16s cubic-bezier(0.4, 0, 0.2, 1);
+  --su-t-snap:    0.15s cubic-bezier(0.4, 0, 0.2, 1);
   --su-t-mid:     0.26s cubic-bezier(0.4, 0, 0.2, 1);
-  --su-t-spring:  0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+  --su-t-spring:  0.44s cubic-bezier(0.34, 1.56, 0.64, 1);
   --su-t-smooth:  0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --su-t-3d:      0.5s cubic-bezier(0.23, 1, 0.32, 1);
 
   /* Fonts */
   --su-font-display:  'Bebas Neue', sans-serif;
@@ -91,22 +100,31 @@ main.auth-scene.auth-signup-theme {
   font-family: var(--su-font-body);
   position: relative;
   overflow: hidden;
+  perspective: var(--su-perspective);
 }
 
-/* Aurora mesh background */
+/* Deep void aurora — darker, more dramatic */
 .auth-scene.auth-signup-theme::before {
   content: '';
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 55% 45% at 15% 20%, rgba(0, 240, 255, 0.09) 0%, transparent 55%),
-    radial-gradient(ellipse 50% 55% at 88% 80%, rgba(180, 79, 255, 0.1) 0%, transparent 55%),
-    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(0, 15, 30, 0.95) 0%, transparent 100%);
+    radial-gradient(ellipse 60% 50% at 10% 15%, rgba(0, 240, 255, 0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 60% at 92% 85%, rgba(180, 79, 255, 0.08) 0%, transparent 58%),
+    radial-gradient(ellipse 70% 70% at 50% 50%, rgba(0, 0, 0, 0.98) 0%, transparent 100%),
+    radial-gradient(ellipse 40% 40% at 80% 10%, rgba(0, 51, 255, 0.05) 0%, transparent 55%);
   pointer-events: none;
   z-index: 0;
+  animation: suAuroraShift 18s ease-in-out infinite alternate;
 }
 
-/* Scanline texture */
+@keyframes suAuroraShift {
+  0%   { opacity: 1; filter: hue-rotate(0deg); }
+  50%  { opacity: 0.85; filter: hue-rotate(15deg); }
+  100% { opacity: 1; filter: hue-rotate(-10deg); }
+}
+
+/* Scanlines — darker */
 .auth-scene.auth-signup-theme::after {
   content: '';
   position: absolute;
@@ -114,22 +132,41 @@ main.auth-scene.auth-signup-theme {
   background-image: repeating-linear-gradient(
     0deg,
     transparent,
-    transparent 2px,
-    rgba(0, 240, 255, 0.012) 2px,
-    rgba(0, 240, 255, 0.012) 4px
+    transparent 3px,
+    rgba(0, 240, 255, 0.008) 3px,
+    rgba(0, 240, 255, 0.008) 4px
   );
   pointer-events: none;
   z-index: 0;
 }
 
 /* ================================================================
-   PANEL
+   FLOATING 3D PARTICLES
+   ================================================================ */
+
+.auth-scene.auth-signup-theme .particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* CSS-only particles via pseudo magic on body if needed,
+   but we use keyframe-powered absolutely positioned particles */
+
+/* ================================================================
+   PANEL — 3D CARD EFFECT
    ================================================================ */
 
 .auth-panel.auth-signup-panel {
-  background: var(--su-bg-surface);
-  backdrop-filter: blur(40px) saturate(1.6);
-  -webkit-backdrop-filter: blur(40px) saturate(1.6);
+  background: linear-gradient(
+    135deg,
+    rgba(0, 10, 20, 0.92) 0%,
+    rgba(0, 5, 15, 0.96) 40%,
+    rgba(0, 2, 10, 0.98) 100%
+  );
+  backdrop-filter: blur(60px) saturate(1.8) brightness(0.9);
+  -webkit-backdrop-filter: blur(60px) saturate(1.8) brightness(0.9);
   border-radius: var(--su-radius-panel);
   padding: 52px 44px;
   max-width: 460px;
@@ -138,41 +175,100 @@ main.auth-scene.auth-signup-theme {
   border: 1px solid var(--su-border-faint);
   position: relative;
   z-index: 1;
-  animation: suPanelIn 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  transform-style: preserve-3d;
+  animation: suPanelIn 0.9s cubic-bezier(0.23, 1, 0.32, 1) both;
   overflow: hidden;
+  transition: transform var(--su-t-3d), box-shadow var(--su-t-3d);
 }
 
-/* Glowing top edge */
+/* 3D tilt on hover */
+.auth-panel.auth-signup-panel:hover {
+  box-shadow:
+    0 0 0 1px rgba(0, 240, 255, 0.09) inset,
+    0 60px 140px rgba(0, 0, 0, 0.97),
+    0 0 120px rgba(0, 240, 255, 0.06),
+    0 20px 40px rgba(0, 240, 255, 0.04);
+}
+
+/* Glowing top edge — brighter */
 .auth-signup-panel::before {
   content: '';
   position: absolute;
-  top: 0; left: 10%; right: 10%;
+  top: 0; left: 5%; right: 5%;
   height: 1px;
   background: linear-gradient(90deg,
     transparent,
-    var(--su-cyan-mid),
+    rgba(0, 200, 215, 0.4),
     var(--su-cyan),
-    var(--su-cyan-mid),
+    rgba(180, 79, 255, 0.6),
+    var(--su-cyan),
+    rgba(0, 200, 215, 0.4),
     transparent
   );
-  box-shadow: 0 0 20px var(--su-cyan);
-  opacity: 0.6;
+  box-shadow: 0 0 24px var(--su-cyan), 0 0 48px rgba(0, 240, 255, 0.3);
+  opacity: 0.7;
+  animation: suTopEdgePulse 3s ease-in-out infinite;
+}
+
+@keyframes suTopEdgePulse {
+  0%, 100% { opacity: 0.55; box-shadow: 0 0 20px var(--su-cyan); }
+  50%       { opacity: 0.85; box-shadow: 0 0 36px var(--su-cyan), 0 0 70px rgba(0,240,255,0.25); }
 }
 
 /* Corner violet bloom */
 .auth-signup-panel::after {
   content: '';
   position: absolute;
-  bottom: -80px; right: -80px;
-  width: 220px; height: 220px;
+  bottom: -100px; right: -100px;
+  width: 280px; height: 280px;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--su-violet-glow) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(180, 79, 255, 0.12) 0%, transparent 70%);
   pointer-events: none;
+  animation: suCornerBreath 5s ease-in-out infinite alternate;
+}
+
+@keyframes suCornerBreath {
+  0%   { transform: scale(1) translate(0, 0); opacity: 0.6; }
+  100% { transform: scale(1.3) translate(-20px, -20px); opacity: 1; }
+}
+
+/* 3D inner glow layer */
+.auth-signup-panel .panel-3d-inner {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--su-radius-panel);
+  background: linear-gradient(
+    180deg,
+    rgba(0, 240, 255, 0.025) 0%,
+    transparent 40%,
+    transparent 60%,
+    rgba(180, 79, 255, 0.015) 100%
+  );
+  pointer-events: none;
+  z-index: 0;
 }
 
 @keyframes suPanelIn {
-  from { opacity: 0; transform: translateY(32px) scale(0.96); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  0%   { opacity: 0; transform: translateY(48px) rotateX(8deg) scale(0.94); }
+  60%  { opacity: 1; transform: translateY(-4px) rotateX(-1deg) scale(1.01); }
+  100% { opacity: 1; transform: translateY(0) rotateX(0deg) scale(1); }
+}
+
+/* ================================================================
+   3D FLOATING CARD ANIMATION (subtle continuous float)
+   ================================================================ */
+
+@keyframes suFloat {
+  0%, 100% { transform: translateY(0px) rotateX(0deg) rotateY(0deg); }
+  25%       { transform: translateY(-6px) rotateX(0.8deg) rotateY(-0.4deg); }
+  50%       { transform: translateY(-10px) rotateX(0deg) rotateY(0.4deg); }
+  75%       { transform: translateY(-4px) rotateX(-0.6deg) rotateY(-0.2deg); }
+}
+
+.auth-panel.auth-signup-panel {
+  animation: suPanelIn 0.9s cubic-bezier(0.23, 1, 0.32, 1) both,
+             suFloat 8s 1s ease-in-out infinite;
+  transform-origin: center center;
 }
 
 /* ================================================================
@@ -181,59 +277,107 @@ main.auth-scene.auth-signup-theme {
 
 .auth-signup-panel .auth-panel-title {
   font-family: var(--su-font-display);
-  font-size: 44px;
-  font-weight: 400; /* Bebas Neue is always bold, 400 = correct */
-  letter-spacing: 4px;
+  font-size: 46px;
+  font-weight: 400;
+  letter-spacing: 5px;
   text-transform: uppercase;
-  color: var(--su-text-bright);
   margin: 0 0 10px 0;
   text-align: center;
   line-height: 1;
+  position: relative;
+  z-index: 1;
 
-  /* Cyan plasma shimmer */
-  background: linear-gradient(100deg, #e8f4ff 20%, var(--su-cyan) 50%, var(--su-violet) 75%, #e8f4ff 100%);
-  background-size: 250% 250%;
+  background: linear-gradient(110deg,
+    #c0e8ff 0%,
+    var(--su-cyan) 30%,
+    #ffffff 50%,
+    var(--su-violet) 70%,
+    var(--su-cyan) 85%,
+    #c0e8ff 100%
+  );
+  background-size: 300% 300%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: suTitlePulse 6s ease-in-out infinite;
+  animation: suTitlePulse 5s ease-in-out infinite;
+
+  /* 3D text depth illusion */
+  filter: drop-shadow(0 0 20px rgba(0, 240, 255, 0.4))
+          drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8));
 }
 
 @keyframes suTitlePulse {
-  0%, 100% { background-position: 0% 50%; }
-  50%       { background-position: 100% 50%; }
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* 3D text shimmer scan line effect */
+.auth-signup-panel .auth-panel-title::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.18) 50%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: suTitleScan 4s ease-in-out infinite 1s;
+  pointer-events: none;
+}
+
+@keyframes suTitleScan {
+  0%   { background-position: -100% 0%; }
+  100% { background-position: 200% 0%; }
 }
 
 .auth-signup-panel .auth-panel-subtitle {
   font-family: var(--su-font-body);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 300;
   font-style: italic;
   color: var(--su-text-dim);
   text-align: center;
   margin: 0 0 36px 0;
   line-height: 1.6;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
+  position: relative;
+  z-index: 1;
 }
 
 /* ================================================================
-   FIELD GROUP
+   FIELD GROUP — 3D ENTRANCE
    ================================================================ */
 
 .auth-signup-panel .auth-field-group {
   margin-bottom: 20px;
-  animation: suFieldIn 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  position: relative;
+  z-index: 1;
+  animation: suField3dIn 0.55s cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
-.auth-signup-panel .auth-field-group:nth-child(1) { animation-delay: 0.1s; }
-.auth-signup-panel .auth-field-group:nth-child(2) { animation-delay: 0.17s; }
-.auth-signup-panel .auth-field-group:nth-child(3) { animation-delay: 0.24s; }
-.auth-signup-panel .auth-field-group:nth-child(4) { animation-delay: 0.31s; }
-.auth-signup-panel .auth-field-group:nth-child(5) { animation-delay: 0.38s; }
+.auth-signup-panel .auth-field-group:nth-child(1) { animation-delay: 0.15s; }
+.auth-signup-panel .auth-field-group:nth-child(2) { animation-delay: 0.22s; }
+.auth-signup-panel .auth-field-group:nth-child(3) { animation-delay: 0.29s; }
+.auth-signup-panel .auth-field-group:nth-child(4) { animation-delay: 0.36s; }
+.auth-signup-panel .auth-field-group:nth-child(5) { animation-delay: 0.43s; }
 
-@keyframes suFieldIn {
-  from { opacity: 0; transform: translateX(-10px); }
-  to   { opacity: 1; transform: translateX(0); }
+@keyframes suField3dIn {
+  from {
+    opacity: 0;
+    transform: translateX(-16px) translateZ(-30px) rotateY(-4deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateZ(0) rotateY(0deg);
+  }
 }
 
 /* ================================================================
@@ -243,16 +387,22 @@ main.auth-scene.auth-signup-theme {
 .auth-signup-panel .auth-field-label {
   display: block;
   font-family: var(--su-font-display);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 400;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.26em;
   text-transform: uppercase;
   color: var(--su-text-label);
   margin-bottom: 9px;
+  transition: color var(--su-t-snap), text-shadow var(--su-t-snap);
+}
+
+.auth-signup-panel .auth-field-group:focus-within .auth-field-label {
+  color: var(--su-cyan);
+  text-shadow: 0 0 12px var(--su-cyan-glow);
 }
 
 /* ================================================================
-   INPUTS
+   INPUTS — 3D DEPTH ON FOCUS
    ================================================================ */
 
 .auth-signup-panel .auth-field-input {
@@ -270,26 +420,31 @@ main.auth-scene.auth-signup-theme {
   transition:
     background var(--su-t-snap),
     border-color var(--su-t-snap),
-    box-shadow var(--su-t-mid);
+    box-shadow var(--su-t-mid),
+    transform var(--su-t-spring);
   caret-color: var(--su-cyan);
+  position: relative;
 }
 
 .auth-signup-panel .auth-field-input::placeholder {
-  color: var(--su-text-dim);
+  color: rgba(80, 120, 150, 0.3);
   font-weight: 300;
 }
 
 .auth-signup-panel .auth-field-input:hover {
-  background: rgba(0, 240, 255, 0.06);
-  border-color: rgba(0, 240, 255, 0.14);
+  background: rgba(0, 240, 255, 0.045);
+  border-color: rgba(0, 240, 255, 0.12);
+  transform: translateY(-1px);
 }
 
 .auth-signup-panel .auth-field-input:focus {
   background: var(--su-bg-input-focus);
   border-color: var(--su-cyan-border);
+  transform: translateY(-2px) scale(1.005);
   box-shadow:
     0 0 0 3px var(--su-cyan-glow),
-    0 0 16px rgba(0, 240, 255, 0.1),
+    0 0 20px rgba(0, 240, 255, 0.12),
+    0 8px 24px rgba(0, 0, 0, 0.4),
     var(--su-shadow-input);
 }
 
@@ -311,7 +466,7 @@ main.auth-scene.auth-signup-theme {
 .auth-signup-panel .auth-password-toggle {
   position: absolute;
   right: 12px;
-  background: rgba(0, 240, 255, 0.08);
+  background: rgba(0, 240, 255, 0.06);
   border: 1px solid var(--su-border-faint);
   border-radius: 6px;
   font-family: var(--su-font-display);
@@ -325,10 +480,11 @@ main.auth-scene.auth-signup-theme {
 }
 
 .auth-signup-panel .auth-password-toggle:hover {
-  background: rgba(0, 240, 255, 0.14);
+  background: rgba(0, 240, 255, 0.12);
   border-color: var(--su-cyan-border);
   color: var(--su-cyan);
-  box-shadow: 0 0 10px var(--su-cyan-glow);
+  box-shadow: 0 0 12px var(--su-cyan-glow);
+  transform: scale(1.05);
 }
 
 /* ================================================================
@@ -345,7 +501,7 @@ main.auth-scene.auth-signup-theme {
 .auth-signup-panel .password-strength-bar {
   flex: 1;
   height: 2px;
-  background: rgba(0, 240, 255, 0.08);
+  background: rgba(0, 240, 255, 0.06);
   border-radius: 100px;
   overflow: hidden;
 }
@@ -353,8 +509,8 @@ main.auth-scene.auth-signup-theme {
 .auth-signup-panel .password-strength-fill {
   height: 100%;
   border-radius: 100px;
-  transition: width 0.4s var(--su-t-smooth), background-color 0.4s ease;
-  box-shadow: 0 0 8px currentColor;
+  transition: width 0.5s var(--su-t-smooth), background-color 0.4s ease;
+  box-shadow: 0 0 10px currentColor;
 }
 
 .auth-signup-panel .password-strength-label {
@@ -396,14 +552,16 @@ main.auth-scene.auth-signup-theme {
 
 .auth-signup-panel .password-match-indicator.match {
   color: var(--su-success);
+  text-shadow: 0 0 8px rgba(0, 245, 160, 0.4);
 }
 
 .auth-signup-panel .password-match-indicator.no-match {
   color: var(--su-error);
+  text-shadow: 0 0 8px rgba(255, 77, 109, 0.4);
 }
 
 /* ================================================================
-   ERROR BOX
+   ERROR BOX — 3D SHAKE
    ================================================================ */
 
 .auth-signup-panel .auth-error-box {
@@ -419,7 +577,8 @@ main.auth-scene.auth-signup-theme {
   align-items: flex-start;
   gap: 9px;
   line-height: 1.5;
-  animation: suShake 0.35s ease-out;
+  animation: su3dShake 0.4s ease-out;
+  box-shadow: 0 0 20px rgba(255, 77, 109, 0.08), inset 0 0 10px rgba(255, 77, 109, 0.04);
 }
 
 .auth-signup-panel .auth-error-box::before {
@@ -428,12 +587,14 @@ main.auth-scene.auth-signup-theme {
   flex-shrink: 0;
 }
 
-@keyframes suShake {
-  0%,100% { transform: translateX(0); }
-  20%      { transform: translateX(-6px); }
-  40%      { transform: translateX(6px); }
-  60%      { transform: translateX(-4px); }
-  80%      { transform: translateX(4px); }
+@keyframes su3dShake {
+  0%   { transform: translateX(0) rotateZ(0deg); }
+  15%  { transform: translateX(-8px) rotateZ(-1deg); }
+  30%  { transform: translateX(7px) rotateZ(0.8deg); }
+  45%  { transform: translateX(-5px) rotateZ(-0.5deg); }
+  60%  { transform: translateX(4px) rotateZ(0.3deg); }
+  75%  { transform: translateX(-2px) rotateZ(-0.1deg); }
+  100% { transform: translateX(0) rotateZ(0deg); }
 }
 
 /* ================================================================
@@ -445,10 +606,12 @@ main.auth-scene.auth-signup-theme {
   flex-direction: column;
   gap: 12px;
   margin-top: 28px;
+  position: relative;
+  z-index: 1;
 }
 
 /* ================================================================
-   PRIMARY BUTTON
+   PRIMARY BUTTON — 3D PRESS + HOLOGRAPHIC
    ================================================================ */
 
 .auth-signup-panel .auth-btn-primary {
@@ -461,7 +624,7 @@ main.auth-scene.auth-signup-theme {
   border-radius: var(--su-radius-btn);
   font-family: var(--su-font-display);
   font-size: 18px;
-  letter-spacing: 0.22em;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
   color: var(--su-cyan);
   cursor: pointer;
@@ -470,41 +633,75 @@ main.auth-scene.auth-signup-theme {
     color var(--su-t-snap),
     transform var(--su-t-spring),
     box-shadow var(--su-t-mid);
-  box-shadow: 0 0 16px var(--su-cyan-glow), inset 0 0 16px rgba(0, 240, 255, 0.04);
-  animation: suFieldIn 0.45s 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  box-shadow:
+    0 0 20px var(--su-cyan-glow),
+    inset 0 0 20px rgba(0, 240, 255, 0.03),
+    0 4px 0 rgba(0, 240, 255, 0.1),
+    0 6px 12px rgba(0, 0, 0, 0.5);
+  animation: suField3dIn 0.55s 0.48s cubic-bezier(0.23, 1, 0.32, 1) both;
+  transform-style: preserve-3d;
 }
 
-/* Sweep fill on hover */
+/* Holographic sweep */
 .auth-signup-panel .auth-btn-primary::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, var(--su-cyan-glow), var(--su-cyan-dim), var(--su-cyan-glow), transparent);
-  transform: translateX(-100%);
-  transition: transform 0.5s ease;
+  background: linear-gradient(
+    105deg,
+    transparent 20%,
+    rgba(0, 240, 255, 0.06) 35%,
+    rgba(180, 79, 255, 0.08) 50%,
+    rgba(0, 240, 255, 0.06) 65%,
+    transparent 80%
+  );
+  transform: translateX(-120%) skewX(-15deg);
+  transition: transform 0.6s ease;
+}
+
+/* Bottom 3D edge */
+.auth-signup-panel .auth-btn-primary::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 10%; right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--su-cyan), transparent);
+  opacity: 0.5;
+  transition: opacity var(--su-t-snap);
 }
 
 .auth-signup-panel .auth-btn-primary:hover:not(:disabled) {
   color: #ffffff;
   border-color: var(--su-cyan);
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.01);
   box-shadow:
-    0 0 30px var(--su-cyan-glow),
-    0 0 60px rgba(0, 240, 255, 0.08),
-    inset 0 0 20px rgba(0, 240, 255, 0.07);
+    0 0 36px var(--su-cyan-glow),
+    0 0 72px rgba(0, 240, 255, 0.1),
+    inset 0 0 24px rgba(0, 240, 255, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(0, 240, 255, 0.2);
+  text-shadow: 0 0 20px rgba(0, 240, 255, 0.6);
 }
 
 .auth-signup-panel .auth-btn-primary:hover:not(:disabled)::before {
-  transform: translateX(100%);
+  transform: translateX(120%) skewX(-15deg);
 }
 
+.auth-signup-panel .auth-btn-primary:hover:not(:disabled)::after {
+  opacity: 0.9;
+}
+
+/* 3D press effect */
 .auth-signup-panel .auth-btn-primary:active:not(:disabled) {
-  transform: translateY(0) scale(0.99);
-  box-shadow: 0 0 14px var(--su-cyan-glow);
+  transform: translateY(2px) scale(0.99);
+  box-shadow:
+    0 0 12px var(--su-cyan-glow),
+    inset 0 2px 8px rgba(0, 0, 0, 0.4),
+    0 1px 0 rgba(0, 240, 255, 0.1);
 }
 
 .auth-signup-panel .auth-btn-primary:disabled {
-  opacity: 0.35;
+  opacity: 0.3;
   cursor: not-allowed;
 }
 
@@ -525,36 +722,42 @@ main.auth-scene.auth-signup-theme {
   cursor: pointer;
   letter-spacing: 0.04em;
   transition: all var(--su-t-mid);
-  animation: suFieldIn 0.45s 0.48s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  animation: suField3dIn 0.55s 0.56s cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
 .auth-signup-panel .auth-btn-ghost:hover:not(:disabled) {
-  background: rgba(0, 240, 255, 0.04);
+  background: rgba(0, 240, 255, 0.03);
   border-color: var(--su-border-mid);
   color: var(--su-text-mid);
+  transform: translateY(-1px);
+}
+
+.auth-signup-panel .auth-btn-ghost:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
 .auth-signup-panel .auth-btn-ghost:disabled {
-  opacity: 0.3;
+  opacity: 0.25;
   cursor: not-allowed;
 }
 
 /* ================================================================
-   OTP MODAL
+   OTP MODAL — 3D FLIP ENTRANCE
    ================================================================ */
 
 .otp-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 2, 8, 0.82);
-  backdrop-filter: blur(10px) saturate(1.3);
-  -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  background: rgba(0, 1, 4, 0.88);
+  backdrop-filter: blur(16px) saturate(1.4) brightness(0.7);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4) brightness(0.7);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 20px;
-  animation: suOverlayIn 0.22s ease-out both;
+  animation: suOverlayIn 0.25s ease-out both;
+  perspective: var(--su-perspective);
 }
 
 @keyframes suOverlayIn {
@@ -563,55 +766,83 @@ main.auth-scene.auth-signup-theme {
 }
 
 .otp-modal-content {
-  background: linear-gradient(150deg, rgba(0, 12, 28, 0.97) 0%, rgba(0, 6, 18, 0.99) 100%);
-  backdrop-filter: blur(48px);
-  -webkit-backdrop-filter: blur(48px);
+  background: linear-gradient(
+    145deg,
+    rgba(0, 8, 20, 0.98) 0%,
+    rgba(0, 4, 12, 0.99) 50%,
+    rgba(0, 2, 8, 1) 100%
+  );
+  backdrop-filter: blur(60px);
+  -webkit-backdrop-filter: blur(60px);
   border-radius: var(--su-radius-panel);
   padding: 48px 40px 38px;
   max-width: 410px;
   width: 100%;
   border: 1px solid var(--su-border-faint);
   box-shadow:
-    0 0 0 1px rgba(0, 240, 255, 0.06) inset,
-    0 50px 120px rgba(0, 0, 0, 0.9),
-    0 0 80px rgba(0, 240, 255, 0.05);
+    0 0 0 1px rgba(0, 240, 255, 0.05) inset,
+    0 60px 140px rgba(0, 0, 0, 0.98),
+    0 0 100px rgba(0, 240, 255, 0.04),
+    0 0 200px rgba(180, 79, 255, 0.03);
   position: relative;
   overflow: hidden;
-  animation: suModalIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: suModal3dIn 0.55s cubic-bezier(0.23, 1, 0.32, 1) both;
+  transform-style: preserve-3d;
 }
 
-/* Cyan glow top edge */
+@keyframes suModal3dIn {
+  0%   {
+    opacity: 0;
+    transform: perspective(800px) rotateX(20deg) translateY(40px) scale(0.88);
+    filter: blur(4px);
+  }
+  60%  {
+    opacity: 1;
+    transform: perspective(800px) rotateX(-2deg) translateY(-4px) scale(1.01);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(800px) rotateX(0deg) translateY(0) scale(1);
+    filter: blur(0px);
+  }
+}
+
+/* Top edge */
 .otp-modal-content::before {
   content: '';
   position: absolute;
-  top: 0; left: 15%; right: 15%;
+  top: 0; left: 10%; right: 10%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--su-cyan), transparent);
-  box-shadow: 0 0 16px var(--su-cyan);
-  opacity: 0.5;
+  background: linear-gradient(90deg,
+    transparent,
+    var(--su-cyan),
+    rgba(180, 79, 255, 0.8),
+    var(--su-cyan),
+    transparent
+  );
+  box-shadow: 0 0 20px var(--su-cyan), 0 0 40px rgba(0, 240, 255, 0.3);
+  opacity: 0.55;
+  animation: suTopEdgePulse 3s ease-in-out infinite 0.5s;
 }
 
-/* Violet ambient bottom */
+/* Violet ambient */
 .otp-modal-content::after {
   content: '';
   position: absolute;
-  bottom: -100px; right: -100px;
-  width: 250px; height: 250px;
+  bottom: -120px; right: -120px;
+  width: 300px; height: 300px;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--su-violet-glow) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(180, 79, 255, 0.1) 0%, transparent 70%);
   pointer-events: none;
-}
-
-@keyframes suModalIn {
-  from { opacity: 0; transform: scale(0.9) translateY(24px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  animation: suCornerBreath 6s ease-in-out infinite alternate;
 }
 
 /* Close button */
 .otp-modal-close {
   position: absolute;
   top: 14px; right: 14px;
-  background: rgba(0, 240, 255, 0.05);
+  background: rgba(0, 240, 255, 0.04);
   border: 1px solid var(--su-border-faint);
   color: var(--su-text-dim);
   font-size: 20px;
@@ -622,22 +853,25 @@ main.auth-scene.auth-signup-theme {
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  transition: all var(--su-t-snap);
+  transition: all var(--su-t-spring);
   font-family: var(--su-font-body);
+  transform-style: preserve-3d;
 }
 
 .otp-modal-close:hover {
-  background: rgba(0, 240, 255, 0.1);
+  background: rgba(0, 240, 255, 0.09);
   border-color: var(--su-cyan-border);
   color: var(--su-cyan);
-  transform: scale(1.1) rotate(90deg);
-  box-shadow: 0 0 10px var(--su-cyan-glow);
+  transform: scale(1.12) rotate(90deg) translateZ(4px);
+  box-shadow: 0 0 14px var(--su-cyan-glow);
 }
 
 /* OTP Header */
 .otp-modal-header {
   text-align: center;
   margin-bottom: 32px;
+  position: relative;
+  z-index: 1;
 }
 
 .otp-icon {
@@ -647,13 +881,19 @@ main.auth-scene.auth-signup-theme {
   letter-spacing: 4px;
   color: var(--su-cyan);
   margin-bottom: 18px;
-  text-shadow: 0 0 20px var(--su-cyan), 0 0 40px rgba(0,240,255,0.4);
-  animation: suIconPulse 2s ease-in-out infinite;
+  animation: suIcon3dPulse 2.5s ease-in-out infinite;
+  transform-style: preserve-3d;
 }
 
-@keyframes suIconPulse {
-  0%, 100% { text-shadow: 0 0 20px var(--su-cyan), 0 0 40px rgba(0,240,255,0.4); }
-  50%       { text-shadow: 0 0 30px var(--su-cyan), 0 0 60px rgba(0,240,255,0.6), 0 0 80px rgba(0,240,255,0.2); }
+@keyframes suIcon3dPulse {
+  0%, 100% {
+    text-shadow: 0 0 20px var(--su-cyan), 0 0 40px rgba(0,240,255,0.4);
+    transform: translateZ(0) scale(1);
+  }
+  50% {
+    text-shadow: 0 0 36px var(--su-cyan), 0 0 72px rgba(0,240,255,0.6), 0 0 100px rgba(0,240,255,0.2);
+    transform: translateZ(8px) scale(1.04);
+  }
 }
 
 .otp-modal-title {
@@ -661,8 +901,12 @@ main.auth-scene.auth-signup-theme {
   font-size: 32px;
   letter-spacing: 3px;
   text-transform: uppercase;
-  color: var(--su-text-bright);
+  background: linear-gradient(120deg, #e8f4ff, var(--su-cyan), var(--su-violet));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin: 0 0 10px 0;
+  filter: drop-shadow(0 0 12px rgba(0, 240, 255, 0.35));
 }
 
 .otp-modal-subtitle {
@@ -677,14 +921,20 @@ main.auth-scene.auth-signup-theme {
 .otp-modal-subtitle strong {
   color: var(--su-cyan);
   font-weight: 500;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
 }
 
-/* OTP inputs */
+/* ================================================================
+   OTP INPUTS — 3D BOUNCE
+   ================================================================ */
+
 .otp-input-container {
   display: flex;
   gap: 10px;
   justify-content: center;
   margin-bottom: 24px;
+  position: relative;
+  z-index: 1;
 }
 
 .otp-input {
@@ -694,11 +944,11 @@ main.auth-scene.auth-signup-theme {
   font-size: 28px;
   letter-spacing: 0.1em;
   color: var(--su-cyan);
-  background: var(--su-bg-input);
+  background: rgba(0, 5, 15, 0.8);
   border: 1px solid var(--su-border-faint);
   border-radius: var(--su-radius-otp);
   outline: none;
-  box-shadow: var(--su-shadow-input);
+  box-shadow: var(--su-shadow-input), inset 0 2px 4px rgba(0, 0, 0, 0.4);
   caret-color: var(--su-cyan);
   transition:
     border-color var(--su-t-snap),
@@ -708,27 +958,49 @@ main.auth-scene.auth-signup-theme {
 }
 
 .otp-input:hover {
-  background: rgba(0, 240, 255, 0.06);
-  border-color: rgba(0, 240, 255, 0.16);
+  background: rgba(0, 10, 25, 0.9);
+  border-color: rgba(0, 240, 255, 0.14);
+  transform: translateY(-2px);
 }
 
 .otp-input:focus {
-  background: var(--su-bg-input-focus);
+  background: rgba(0, 15, 35, 0.95);
   border-color: var(--su-cyan-border);
-  box-shadow: 0 0 0 3px var(--su-cyan-glow), 0 0 20px rgba(0,240,255,0.1);
-  transform: translateY(-3px) scale(1.06);
+  box-shadow:
+    0 0 0 3px var(--su-cyan-glow),
+    0 0 24px rgba(0,240,255,0.14),
+    0 8px 20px rgba(0, 0, 0, 0.5),
+    inset 0 0 10px rgba(0, 240, 255, 0.04);
+  transform: translateY(-5px) scale(1.08);
 }
 
 .otp-input:not(:placeholder-shown) {
   border-color: var(--su-cyan-dim);
-  background: rgba(0, 240, 255, 0.05);
-  text-shadow: 0 0 10px var(--su-cyan);
+  background: rgba(0, 15, 30, 0.95);
+  text-shadow: 0 0 14px var(--su-cyan), 0 0 28px rgba(0, 240, 255, 0.4);
+  color: #ffffff;
 }
 
-/* OTP resend */
+/* OTP digit fill animation */
+.otp-input:not(:placeholder-shown) {
+  animation: suOtpFill 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes suOtpFill {
+  0%   { transform: scale(0.8) translateY(4px); opacity: 0.5; }
+  70%  { transform: scale(1.1) translateY(-2px); }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* ================================================================
+   OTP RESEND
+   ================================================================ */
+
 .otp-resend-container {
   text-align: center;
   margin-top: 20px;
+  position: relative;
+  z-index: 1;
 }
 
 .otp-resend-timer {
@@ -750,13 +1022,13 @@ main.auth-scene.auth-signup-theme {
   letter-spacing: 0.03em;
   cursor: pointer;
   padding: 4px 2px;
-  position: relative;
-  transition: color var(--su-t-snap), text-shadow var(--su-t-snap);
+  transition: color var(--su-t-snap), text-shadow var(--su-t-snap), transform var(--su-t-spring);
 }
 
 .otp-resend-button:hover {
   color: var(--su-cyan);
-  text-shadow: 0 0 10px var(--su-cyan-glow);
+  text-shadow: 0 0 12px var(--su-cyan-glow);
+  transform: translateY(-1px);
 }
 
 .otp-help-text {
@@ -767,6 +1039,8 @@ main.auth-scene.auth-signup-theme {
   margin: 16px 0 0 0;
   line-height: 1.6;
   font-family: var(--su-font-body);
+  position: relative;
+  z-index: 1;
 }
 
 /* OTP error */
@@ -781,6 +1055,10 @@ main.auth-scene.auth-signup-theme {
   display: flex;
   align-items: center;
   gap: 8px;
+  position: relative;
+  z-index: 1;
+  animation: su3dShake 0.4s ease-out;
+  box-shadow: 0 0 20px rgba(255, 77, 109, 0.07);
 }
 
 .otp-modal-content .auth-error-box::before {
@@ -796,38 +1074,101 @@ main.auth-scene.auth-signup-theme {
   border-radius: var(--su-radius-btn);
   font-family: var(--su-font-display);
   font-size: 17px;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--su-cyan);
   cursor: pointer;
   position: relative;
   overflow: hidden;
   transition: all var(--su-t-mid);
-  box-shadow: 0 0 16px var(--su-cyan-glow);
+  box-shadow: 0 0 18px var(--su-cyan-glow), 0 4px 12px rgba(0, 0, 0, 0.5);
+  z-index: 1;
+  transform-style: preserve-3d;
 }
 
 .otp-modal-content .auth-btn-primary::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(0,240,255,0.1), transparent);
-  transform: translateX(-100%);
-  transition: transform 0.5s ease;
+  background: linear-gradient(
+    105deg,
+    transparent 20%,
+    rgba(0, 240, 255, 0.07) 40%,
+    rgba(180, 79, 255, 0.07) 55%,
+    rgba(0, 240, 255, 0.05) 70%,
+    transparent 85%
+  );
+  transform: translateX(-120%) skewX(-15deg);
+  transition: transform 0.6s ease;
 }
 
 .otp-modal-content .auth-btn-primary:hover:not(:disabled) {
   color: #fff;
   border-color: var(--su-cyan);
-  box-shadow: 0 0 28px var(--su-cyan-glow), 0 0 60px rgba(0,240,255,0.06);
+  box-shadow:
+    0 0 32px var(--su-cyan-glow),
+    0 0 70px rgba(0,240,255,0.07),
+    0 8px 20px rgba(0, 0, 0, 0.6);
+  transform: translateY(-2px);
+  text-shadow: 0 0 16px rgba(0, 240, 255, 0.5);
 }
 
 .otp-modal-content .auth-btn-primary:hover:not(:disabled)::before {
-  transform: translateX(100%);
+  transform: translateX(120%) skewX(-15deg);
+}
+
+.otp-modal-content .auth-btn-primary:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
 }
 
 .otp-modal-content .auth-btn-primary:disabled {
-  opacity: 0.3;
+  opacity: 0.25;
   cursor: not-allowed;
+}
+
+/* ================================================================
+   COSMIC GRID OVERLAY (subtle depth grid)
+   ================================================================ */
+
+.auth-scene.auth-signup-theme .cosmic-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0, 240, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.025) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 0%, transparent 100%);
+  pointer-events: none;
+  z-index: 0;
+  animation: suGridPerspective 20s linear infinite;
+}
+
+@keyframes suGridPerspective {
+  0%   { transform: perspective(600px) rotateX(60deg) translateY(0px); opacity: 0.4; }
+  100% { transform: perspective(600px) rotateX(60deg) translateY(60px); opacity: 0.4; }
+}
+
+/* ================================================================
+   GLITCH EFFECT ON TITLE (optional, apply .glitch class)
+   ================================================================ */
+
+.auth-signup-panel .auth-panel-title.glitch {
+  animation: suTitlePulse 5s ease-in-out infinite, suGlitch 8s step-end infinite 3s;
+}
+
+@keyframes suGlitch {
+  0%, 92%, 100% { clip-path: none; transform: none; }
+  93% {
+    clip-path: polygon(0 20%, 100% 20%, 100% 40%, 0 40%);
+    transform: translateX(-3px);
+    filter: drop-shadow(2px 0 var(--su-violet));
+  }
+  94% {
+    clip-path: polygon(0 60%, 100% 60%, 100% 80%, 0 80%);
+    transform: translateX(3px);
+    filter: drop-shadow(-2px 0 var(--su-cyan));
+  }
+  95% { clip-path: none; transform: none; filter: none; }
 }
 
 /* ================================================================
@@ -835,13 +1176,18 @@ main.auth-scene.auth-signup-theme {
    ================================================================ */
 
 @media (max-width: 640px) {
-  .auth-signup-panel { padding: 38px 26px; }
-  .auth-signup-panel .auth-panel-title { font-size: 36px; }
-  .otp-modal-content { padding: 36px 26px 30px; }
+  .auth-signup-panel { padding: 38px 24px; }
+  .auth-signup-panel .auth-panel-title { font-size: 38px; letter-spacing: 3px; }
+  .otp-modal-content { padding: 36px 22px 30px; }
   .otp-modal-title { font-size: 26px; }
   .otp-input-container { gap: 8px; }
   .otp-input { width: 42px; height: 50px; font-size: 22px; }
   .auth-field-input { font-size: 16px; }
+
+  /* Disable heavy 3D on mobile for performance */
+  .auth-panel.auth-signup-panel {
+    animation: suPanelIn 0.7s cubic-bezier(0.23, 1, 0.32, 1) both;
+  }
 }
 
 /* ================================================================

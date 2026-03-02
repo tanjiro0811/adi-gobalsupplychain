@@ -19,6 +19,8 @@ function Blockchain({ user, onLogout, onNavigate, currentPath }) {
   const [filterStatus, setFilterStatus] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedTx, setSelectedTx] = useState(null)
+  const [verifyTxHash, setVerifyTxHash] = useState('')
+  const [verifyMessage, setVerifyMessage] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -127,14 +129,14 @@ function Blockchain({ user, onLogout, onNavigate, currentPath }) {
 
   const handleVerifyTransaction = async (txHash) => {
     try {
-      await adminApi.verifyBlockchainTransaction(txHash)
-      alert('Transaction verified successfully')
+      const result = await adminApi.verifyBlockchainTransaction(txHash)
+      setVerifyMessage(result?.success ? 'Transaction verified successfully.' : 'Transaction hash not found in ledger.')
       // Refresh data
       const response = await adminApi.blockchainTransactions()
       setTransactions(response.transactions || transactions)
     } catch (error) {
       console.error('Error verifying transaction:', error)
-      alert('Failed to verify transaction')
+      setVerifyMessage('Failed to verify transaction.')
     }
   }
 
@@ -298,6 +300,33 @@ function Blockchain({ user, onLogout, onNavigate, currentPath }) {
               </select>
             </div>
           </div>
+          <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 12 }}>
+            <input
+              type="text"
+              placeholder="Verify by txHash..."
+              value={verifyTxHash}
+              onChange={(e) => setVerifyTxHash(e.target.value)}
+              style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14 }}
+            />
+            <button
+              type="button"
+              onClick={() => handleVerifyTransaction(verifyTxHash)}
+              style={{
+                padding: '8px 12px',
+                border: 'none',
+                borderRadius: 8,
+                background: '#10b981',
+                color: '#fff',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Verify txHash
+            </button>
+          </div>
+          {verifyMessage && (
+            <p style={{ margin: '10px 0 0 0', fontSize: 13, color: '#1f2937' }}>{verifyMessage}</p>
+          )}
         </div>
       </section>
 

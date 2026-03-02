@@ -48,6 +48,8 @@ function TransporterDashboard({
   const [isSocketConnected, setIsSocketConnected] = useState(false)
   const [lastSocketUpdate, setLastSocketUpdate] = useState('')
   const [activeView, setActiveView] = useState(initialView)
+  const [pingingShipmentId, setPingingShipmentId] = useState('')
+  const [pingMessage, setPingMessage] = useState('')
 
   const applyTransportPayload = useCallback(
     ({ shipments: nextShipments = {}, analytics = {}, alerts: nextAlerts = [], generatedAt = '' }) => {
@@ -136,6 +138,39 @@ function TransporterDashboard({
     [analyticsPayload, shipments],
   )
   const alertFeed = useMemo(() => (alerts.length ? alerts : buildTransportAlerts(shipments)), [alerts, shipments])
+  const controllableShipments = useMemo(
+    () => shipmentRows.filter((item) => item.isInTransit && item.hasGps).slice(0, 4),
+    [shipmentRows],
+  )
+
+  const sendGpsPing = useCallback(
+    async (shipment) => {
+      if (!shipment?.id || !Number.isFinite(shipment.lat) || !Number.isFinite(shipment.lng)) {
+        return
+      }
+
+      setPingingShipmentId(shipment.id)
+      setPingMessage('')
+      try {
+        const latShift = ((Math.random() * 2) - 1) * 0.02
+        const lngShift = ((Math.random() * 2) - 1) * 0.02
+        const nextLat = Number((shipment.lat + latShift).toFixed(5))
+        const nextLng = Number((shipment.lng + lngShift).toFixed(5))
+
+        await trackingApi.updateShipmentLocation(shipment.id, {
+          lat: nextLat,
+          lng: nextLng,
+          status: 'in_transit',
+        })
+        setPingMessage(`GPS ping sent for ${shipment.id} (${nextLat}, ${nextLng}).`)
+      } catch (error) {
+        setPingMessage(error?.message || 'Failed to send GPS ping.')
+      } finally {
+        setPingingShipmentId('')
+      }
+    },
+    [],
+  )
 
   const stats = [
     { label: 'Vehicles Active', value: metrics.activeVehicles, trend: isSocketConnected ? 'WebSocket live' : 'API snapshot' },
@@ -215,6 +250,49 @@ function TransporterDashboard({
                   </article>
                 ))}
               </div>
+            )}
+          </section>
+          <section className="card" style={{ marginTop: 12 }}>
+            <div className="shipments-header">
+              <h4 className="card-title">Live GPS Ping Control</h4>
+              <div className="shipments-controls">
+                <span className={`tracking-chip ${isSocketConnected ? 'live' : 'offline'}`}>
+                  Dealer ETA sync active
+                </span>
+              </div>
+            </div>
+            {!controllableShipments.length && (
+              <p className="muted" style={{ margin: 0 }}>
+                No in-transit GPS-enabled shipments available for ping.
+              </p>
+            )}
+            {!!controllableShipments.length && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {controllableShipments.map((shipment) => (
+                  <button
+                    key={shipment.id}
+                    type="button"
+                    onClick={() => sendGpsPing(shipment)}
+                    disabled={pingingShipmentId === shipment.id}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: 8,
+                      border: 'none',
+                      cursor: pingingShipmentId === shipment.id ? 'not-allowed' : 'pointer',
+                      background: '#0ea5e9',
+                      color: '#ffffff',
+                      opacity: pingingShipmentId === shipment.id ? 0.7 : 1,
+                    }}
+                  >
+                    {pingingShipmentId === shipment.id ? 'Sending...' : `Ping ${shipment.id}`}
+                  </button>
+                ))}
+              </div>
+            )}
+            {!!pingMessage && (
+              <p className="tracking-feedback-note" style={{ marginTop: 10 }}>
+                {pingMessage}
+              </p>
             )}
           </section>
         </>

@@ -56,6 +56,7 @@ function DealerDashboard({ user, onLogout, onNavigate, currentPath }) {
   const [orderTrends, setOrderTrends] = useState([])
   const [lowStock, setLowStock] = useState([])
   const [inboundShipments, setInboundShipments] = useState([])
+  const [reorderItems, setReorderItems] = useState([])
   const [activeView, setActiveView] = useState('overview')
 
   useEffect(() => {
@@ -63,11 +64,12 @@ function DealerDashboard({ user, onLogout, onNavigate, currentPath }) {
 
     async function loadDealerData() {
       try {
-        const [ordersRes, trendsRes, stockRes, arrivalsRes] = await Promise.all([
+        const [ordersRes, trendsRes, stockRes, arrivalsRes, reorderRes] = await Promise.all([
           dealerApi.recentOrders(),
           dealerApi.orderTrends(),
           dealerApi.lowStockAlerts(),
           dealerApi.arrivals(),
+          dealerApi.reorderRecommendations(30),
         ])
 
         if (mounted) {
@@ -75,6 +77,7 @@ function DealerDashboard({ user, onLogout, onNavigate, currentPath }) {
           setOrderTrends(Array.isArray(trendsRes?.trends) ? trendsRes.trends : [])
           setLowStock(Array.isArray(stockRes?.items) ? stockRes.items : [])
           setInboundShipments(normalizeShipments(arrivalsRes?.shipments || []))
+          setReorderItems(Array.isArray(reorderRes?.items) ? reorderRes.items : [])
         }
       } catch (error) {
         console.error('Error loading dealer data:', error)
@@ -83,6 +86,7 @@ function DealerDashboard({ user, onLogout, onNavigate, currentPath }) {
           setOrderTrends([])
           setLowStock([])
           setInboundShipments([])
+          setReorderItems([])
         }
       } finally {
         if (mounted) setLoading(false)
@@ -128,9 +132,10 @@ function DealerDashboard({ user, onLogout, onNavigate, currentPath }) {
       { label: 'Inbound Loads', value: inboundShipments.length, trend: 'Live' },
       { label: 'Payment Pending', value: orderStatusData[2].value, trend: 'Live' },
       { label: 'Low Stock Alerts', value: lowStock.length, trend: 'Live' },
+      { label: 'AI Reorder Urgent', value: reorderItems.filter((item) => item.priority === 'high').length, trend: 'Runs out <5d' },
       { label: 'Avg Order Value', value: formatCurrency(avgOrderValue), trend: 'Live' },
     ]
-  }, [recentOrders, inboundShipments, orderStatusData, lowStock])
+  }, [recentOrders, inboundShipments, orderStatusData, lowStock, reorderItems])
 
   const getStatusBadge = (status) => {
     const styles = {
@@ -317,6 +322,17 @@ function DealerDashboard({ user, onLogout, onNavigate, currentPath }) {
                 </a>
               </div>
             </div>
+          </div>
+        </section>
+      )}
+
+      {reorderItems.some((item) => item.priority === 'high') && (
+        <section style={{ marginBottom: 24 }}>
+          <div style={{ background: '#fee2e2', border: '1px solid #ef4444', borderRadius: 12, padding: 16 }}>
+            <h4 style={{ margin: '0 0 4px 0', color: '#991b1b', fontWeight: 700 }}>AI Reorder Signal</h4>
+            <p style={{ margin: 0, color: '#7f1d1d', fontSize: 14 }}>
+              {reorderItems.find((item) => item.priority === 'high')?.recommendation || 'Stock depletion predicted. Reorder now.'}
+            </p>
           </div>
         </section>
       )}

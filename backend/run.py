@@ -17,6 +17,7 @@ from app.api import admin, auth, blockchain, dealer, inventory, manufacturer, tr
 from app.core.config import ConfigurationError, get_settings, validate_settings
 from app.api.tracking import get_tracking_socket_payload
 from app.services.database_service import DatabaseError, check_database_connection, initialize_database
+from app.services.notification_service import notification_service
 
 logger = logging.getLogger("global_supply_chain_api")
 
@@ -107,6 +108,19 @@ def create_app() -> FastAPI:
                 await asyncio.sleep(2)
         except WebSocketDisconnect:
             return
+
+    @app.websocket("/ws/notifications/{user_id}")
+    async def notifications_socket(websocket: WebSocket, user_id: str) -> None:
+        await notification_service.connect(user_id, websocket)
+        try:
+            recent = notification_service.list_recent(limit=20, user_id=user_id)
+            await websocket.send_json({"type": "notification:init", "items": recent})
+            while True:
+                await websocket.receive_text()
+        except WebSocketDisconnect:
+            pass
+        finally:
+            await notification_service.disconnect(user_id, websocket)
 
     return app
 

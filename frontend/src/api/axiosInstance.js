@@ -109,6 +109,18 @@ function canUseRawErrorText(rawText, contentType, status) {
   return true
 }
 
+function looksLikeProxyConnectionFailure(rawText = '', contentType = '') {
+  const haystack = `${String(contentType || '').toLowerCase()}\n${String(rawText || '').toLowerCase()}`
+  return (
+    haystack.includes('ecconnrefused') ||
+    haystack.includes('connect econnrefused') ||
+    haystack.includes('proxy error') ||
+    haystack.includes('http proxy error') ||
+    haystack.includes('target machine actively refused') ||
+    haystack.includes('fetch failed')
+  )
+}
+
 async function request(path, { method = 'GET', data, headers = {}, responseType = 'json' } = {}) {
   const auth = getAuthState()
   const requestHeaders = {
@@ -154,7 +166,12 @@ async function request(path, { method = 'GET', data, headers = {}, responseType 
     const rawBody = await safeReadText(response)
     if (rawBody) {
       const contentType = response.headers.get('content-type') || ''
-      if (contentType.includes('application/json')) {
+      if (response.status >= 500 && looksLikeProxyConnectionFailure(rawBody, contentType)) {
+        const connectionHint = API_BASE_URL.startsWith('http')
+          ? API_BASE_URL
+          : `backend via ${API_BASE_URL} (dev proxy)`
+        message = `Cannot reach server (${connectionHint}). Make sure backend is running.`
+      } else if (contentType.includes('application/json')) {
         const payload = tryParseJson(rawBody)
         if (payload) {
           const extractedMessage = extractErrorMessage(payload)
@@ -913,6 +930,10 @@ export const manufacturerApi = {
     FALLBACK_MANUFACTURER_BATCHES,
     (payload) => !Array.isArray(payload?.items) || !payload.items.length,
   ),
+  createBatchForOrder: (orderCode, payload) =>
+    http.patch(`/manufacturer/orders/${encodeURIComponent(orderCode)}/create-batch`, payload),
+  assignTransporter: (orderCode, payload) =>
+    http.patch(`/manufacturer/orders/${encodeURIComponent(orderCode)}/assign-transporter`, payload),
 }
 
 export const trackingApi = {
@@ -936,6 +957,10 @@ export const trackingApi = {
       return trendEmpty && statusEmpty && forecastEmpty
     },
   ),
+  updateOrderStage: (orderCode, payload) =>
+    http.patch(`/tracking/orders/${encodeURIComponent(orderCode)}/stage`, payload),
+  updateShipmentLocation: (shipmentId, payload) =>
+    http.patch(`/tracking/shipments/${encodeURIComponent(shipmentId)}`, payload),
 }
 
 export const inventoryApi = {
@@ -950,6 +975,20 @@ export const inventoryApi = {
     (timeRange = 'week') => buildRetailSalesAnalytics(timeRange),
     (payload) =>
       !Array.isArray(payload?.trend) || !payload.trend.length,
+  ),
+  sellProduct: withFallback(
+    (payload) => http.post('/inventory/sales', payload),
+    (payload) => ({
+      success: true,
+      sale: {
+        sku: payload?.sku,
+        units_sold: payload?.quantity,
+        sale_amount: Number(payload?.quantity || 0) * 10,
+      },
+      txHash: 'demo-tx-hash',
+      updatedStock: 0,
+      saleAmount: Number(payload?.quantity || 0) * 10,
+    }),
   ),
 }
 
@@ -989,6 +1028,22 @@ export const dealerApi = {
       return revenueEmpty && topProductsEmpty && orderStatusEmpty
     },
   ),
+  pipelineOrders: () => http.get('/dealer/orders/pipeline'),
+  createRetailOrder: (payload) => http.post('/dealer/orders/retail', payload),
+  confirmOrder: (orderCode) => http.patch(`/dealer/orders/${encodeURIComponent(orderCode)}/confirm`, {}),
+  forwardOrderToManufacturer: (orderCode, payload = {}) =>
+    http.patch(`/dealer/orders/${encodeURIComponent(orderCode)}/dealer-order`, payload),
+  receiveOrder: (orderCode) => http.patch(`/dealer/orders/${encodeURIComponent(orderCode)}/receive`, {}),
+  retailReceiveOrder: (orderCode) =>
+    http.patch(`/dealer/orders/${encodeURIComponent(orderCode)}/retail-receive`, {}),
+  reorderRecommendations: (days = 30) =>
+    http.get(`/dealer/reorder-recommendations?days=${encodeURIComponent(days)}`),
+}
+
+export const blockchainApi = {
+  journey: (productSku) => http.get(`/blockchain/journey/${encodeURIComponent(productSku)}`),
+  qr: (productSku) => http.get(`/blockchain/qr/${encodeURIComponent(productSku)}`),
+  verify: (payload) => http.post('/blockchain/verify', payload),
 }
 
 export default http

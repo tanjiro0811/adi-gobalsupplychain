@@ -13,8 +13,10 @@ class Settings:
     jwt_algorithm: str
     access_token_expire_minutes: int
     mysql_url: str
+    database_url: str
     sqlite_db_path: str
     blockchain_salt: str
+    gemini_api_key: str
     smtp_server: str
     smtp_port: int
     sender_email: str
@@ -43,8 +45,8 @@ def validate_settings(settings: Settings) -> None:
     errors: list[str] = []
     env = settings.app_env.strip().lower()
 
-    if not settings.sqlite_db_path.strip():
-        errors.append("SQLITE_DB_PATH cannot be empty")
+    if not settings.database_url.strip() and not settings.sqlite_db_path.strip():
+        errors.append("Either DATABASE_URL or SQLITE_DB_PATH must be set")
 
     if settings.access_token_expire_minutes <= 0:
         errors.append("ACCESS_TOKEN_EXPIRE_MINUTES must be greater than 0")
@@ -74,8 +76,10 @@ def get_settings() -> Settings:
             "MYSQL_URL",
             "mysql+pymysql://root:password@localhost:3306/global_supply_chain",
         ),
+        database_url=os.getenv("DATABASE_URL", "").strip(),
         sqlite_db_path=os.getenv("SQLITE_DB_PATH", "data/app.db"),
         blockchain_salt=os.getenv("BLOCKCHAIN_SALT", "global-supply-chain-salt"),
+        gemini_api_key=os.getenv("GEMINI_API_KEY", "").strip(),
         smtp_server=os.getenv("SMTP_SERVER", "smtp.gmail.com"),
         smtp_port=_to_int("SMTP_PORT", "587"),
         sender_email=os.getenv("SENDER_EMAIL", "noreply@globalsupplychain.local"),

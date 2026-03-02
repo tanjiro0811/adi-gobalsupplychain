@@ -570,6 +570,176 @@ input::placeholder { color: var(--dealer-muted); }
   box-shadow: none;
 }
 
+/* POS cart controls */
+.pos-cart {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cart-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cart-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--dealer-border);
+  background: #f8fffe;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.cart-item-info {
+  min-width: 0;
+}
+
+.cart-item-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #134e4a;
+}
+
+.cart-item-price {
+  margin: 2px 0 0 0;
+  font-size: 12px;
+  color: #0f766e;
+}
+
+.cart-item-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-quantity {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #99f6e4;
+  border-radius: 8px;
+  background: #f0fdfa;
+  color: #0f766e;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-quantity:hover {
+  background: #ccfbf1;
+  border-color: #5eead4;
+}
+
+.cart-quantity {
+  min-width: 24px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #134e4a;
+}
+
+.btn-remove {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff1f2;
+  color: #b91c1c;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-remove:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.cart-item-total {
+  font-size: 14px;
+  font-weight: 800;
+  color: #134e4a;
+  min-width: 72px;
+  text-align: right;
+}
+
+.cart-summary {
+  margin-top: 4px;
+  border-top: 1px solid var(--dealer-border);
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.payment-method {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.payment-method label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #134e4a;
+}
+
+.payment-select {
+  width: 100%;
+}
+
+.cart-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #ecfeff;
+  border: 1px solid #bae6fd;
+}
+
+.total-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.total-amount {
+  font-size: 18px;
+  font-weight: 900;
+  color: #134e4a;
+}
+
+.btn-checkout {
+  width: 100%;
+  border: 1px solid #0f766e;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #14b8a6 0%, #0f766e 100%);
+  color: #f8fafc;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 11px 14px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.btn-checkout:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 118, 110, 0.28);
+}
+
+.btn-checkout:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Retail sales period buttons */
 .period-selector {
   display: flex;
@@ -720,5 +890,18 @@ input::placeholder { color: var(--dealer-muted); }
 
   .inventory-controls {
     grid-template-columns: 1fr;
+  }
+
+  .cart-item {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .cart-item-controls {
+    justify-content: flex-start;
+  }
+
+  .cart-item-total {
+    text-align: left;
   }
 }

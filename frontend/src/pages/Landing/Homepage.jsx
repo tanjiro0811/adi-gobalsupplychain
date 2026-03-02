@@ -14,10 +14,12 @@ function Homepage({ onGuestEntry, onLoginClick, onSignupClick, isGuestView = fal
         <GlassCard className="homepage-card">
           <div className="homepage-header">
             <div className="logo-container">
-             <div className="logo-icon">🌐</div>
-<h1 className="homepage-title">
-  <span className="title-highlight">Global Supply Chain Platform</span>
-</h1>
+              <div className="logo-icon">
+                <img src="/favicon.svg" alt="Global Supply Chain logo" />
+              </div>
+              <h1 className="homepage-title">
+                <span className="title-highlight">Global Supply Chain Platform</span>
+              </h1>
             </div>
             
             <p className="homepage-subtitle">

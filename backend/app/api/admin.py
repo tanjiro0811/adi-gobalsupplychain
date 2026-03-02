@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import io
 from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
@@ -10,9 +11,18 @@ from fastapi.responses import Response
 from app.core.middleware import require_roles
 from app.models.user import UserRole
 from app.services.ai_service import predict_demand
-from app.services.database_service import DatabaseError, count_guest_entries, count_users
+from app.services.database_service import (
+    DatabaseError,
+    build_admin_blockchain_transactions,
+    count_guest_entries,
+    count_users,
+    get_ledger_record_by_tx_hash,
+    get_sales_history,
+    list_orders,
+    list_users,
+    summarize_global_metrics,
+)
 from app.services.notification_service import notification_service
-from app.services.state_service import batches, ledger_records, products, shipments, users
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -20,31 +30,37 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 @router.get("/stats", dependencies=[Depends(require_roles(UserRole.admin))])
 def get_global_stats() -> dict:
     try:
-        db_user_count = count_users()
-        guest_entries = count_guest_entries()
+        metrics = summarize_global_metrics()
+        return {
+            "total_users": count_users(),
+            "guest_entries": count_guest_entries(),
+            "total_products": metrics["total_products"],
+            "total_batches": metrics["total_batches"],
+            "active_shipments": metrics["active_shipments"],
+            "revenue": metrics["revenue"],
+        }
     except DatabaseError:
-        db_user_count = 0
-        guest_entries = 0
-
-    in_memory_users = len(users)
-    total_users = max(in_memory_users, db_user_count)
-    revenue = sum(item["quantity"] * item["price"] for item in products)
-    return {
-        "total_users": total_users,
-        "guest_entries": guest_entries,
-        "total_products": len(products),
-        "total_batches": len(batches),
-        "active_shipments": len(shipments),
-        "revenue": round(revenue, 2),
-    }
+        return {
+            "total_users": 0,
+            "guest_entries": 0,
+            "total_products": 0,
+            "total_batches": 0,
+            "active_shipments": 0,
+            "revenue": 0.0,
+        }
 
 
 @router.get("/ai-forecast", dependencies=[Depends(require_roles(UserRole.admin))])
 def get_ai_forecast(
-    history: str = Query("120,128,134,140,155,162"),
+    history: str = Query(""),
     horizon: int = Query(3, ge=1, le=12),
 ) -> dict:
     values = [float(value.strip()) for value in history.split(",") if value.strip()]
+    if not values:
+        sales = get_sales_history(days=90)
+        values = [float(item.get("units_sold", 0)) for item in sales[-30:]]
+    if not values:
+        values = [120, 128, 134, 140, 155, 162]
     return {
         "input": values,
         "horizon": horizon,
@@ -53,21 +69,22 @@ def get_ai_forecast(
 
 
 @router.get("/notifications", dependencies=[Depends(require_roles(UserRole.admin))])
-def get_notifications(limit: int = Query(20, ge=1, le=100)) -> dict:
-    return {"items": notification_service.list_recent(limit=limit)}
+def get_notifications(limit: int = Query(20, ge=1, le=100), user_id: Optional[str] = None) -> dict:
+    return {"items": notification_service.list_recent(limit=limit, user_id=user_id)}
 
 
 @router.get("/analytics", dependencies=[Depends(require_roles(UserRole.admin))])
 def analytics(time_range: str = Query("30d", alias="range")) -> dict:
     points = 7 if time_range == "7d" else 365 if time_range == "1y" else 90 if time_range == "90d" else 30
-    product_revenue = sum(float(item.get("quantity", 0)) * float(item.get("price", 0.0)) for item in products)
-    shipment_count = len(shipments)
-    batch_count = len(batches)
-    delayed_count = sum(1 for item in shipments.values() if "delay" in str(item.get("status", "")).lower())
-    in_transit_count = sum(1 for item in shipments.values() if "transit" in str(item.get("status", "")).lower())
 
-    base = max(product_revenue * 0.08, 1200.0)
-    throughput = (shipment_count * 180.0) + (batch_count * 140.0)
+    metrics = summarize_global_metrics()
+    orders = list_orders(limit=800)
+    users = list_users()
+    delayed_count = sum(1 for item in orders if "delay" in str(item.get("status", "")).lower())
+    in_transit_count = sum(1 for item in orders if "transit" in str(item.get("status", "")).lower())
+
+    base = max(metrics["revenue"] * 0.08, 1200.0)
+    throughput = (metrics["active_shipments"] * 180.0) + (metrics["total_batches"] * 140.0)
     delay_penalty = delayed_count * 45.0
     revenue = []
     for idx in range(points):
@@ -80,28 +97,19 @@ def analytics(time_range: str = Query("30d", alias="range")) -> dict:
     forecast_source = [float(value) for value in revenue[-min(len(revenue), 12):]]
     forecast = predict_demand(forecast_source, horizon=forecast_horizon)
 
-    try:
-        db_user_count = count_users()
-        guest_entries = count_guest_entries()
-    except DatabaseError:
-        db_user_count = 0
-        guest_entries = 0
-
-    normalized_roles = [
-        role.value if hasattr(role, "value") else str(role) for role in [u.get("role") for u in users.values()]
-    ]
-    total_users = max(len(users), db_user_count)
     role_counts = {
-        "Manufacturers": len([role for role in normalized_roles if role == UserRole.manufacturer.value]),
-        "Transporters": len([role for role in normalized_roles if role == UserRole.transporter.value]),
-        "Dealers": len([role for role in normalized_roles if role == UserRole.dealer.value]),
-        "Retail Shops": len([role for role in normalized_roles if role == UserRole.retail_shop.value]),
+        "Manufacturers": sum(1 for item in users if item.get("role") == UserRole.manufacturer.value),
+        "Transporters": sum(1 for item in users if item.get("role") == UserRole.transporter.value),
+        "Dealers": sum(1 for item in users if item.get("role") == UserRole.dealer.value),
+        "Retail Shops": sum(1 for item in users if item.get("role") == UserRole.retail_shop.value),
     }
+    total_users = len(users)
+    guest_entries = count_guest_entries()
 
     active_entities = max(total_users - delayed_count, 0)
-    pending_items = max((shipment_count - in_transit_count) + max(guest_entries // 2, 0), 0)
+    pending_items = max((metrics["active_shipments"] - in_transit_count) + max(guest_entries // 2, 0), 0)
     issue_items = max(delayed_count, 0)
-    maintenance_items = max(shipment_count - in_transit_count - delayed_count, 0)
+    maintenance_items = max(metrics["active_shipments"] - in_transit_count - delayed_count, 0)
 
     return {
         "revenue": revenue,
@@ -120,8 +128,8 @@ def analytics(time_range: str = Query("30d", alias="range")) -> dict:
         ],
         "apiMetrics": {
             "auth": max(total_users * 12 + guest_entries * 3, 1),
-            "blockchain": max(len(ledger_records), 1),
-            "gps": max(shipment_count * 18, 1),
+            "blockchain": max(len(build_admin_blockchain_transactions().get("transactions", [])), 1),
+            "gps": max(metrics["active_shipments"] * 18, 1),
             "analytics": max(points * 4, 1),
         },
     }
@@ -129,45 +137,18 @@ def analytics(time_range: str = Query("30d", alias="range")) -> dict:
 
 @router.get("/blockchain/transactions", dependencies=[Depends(require_roles(UserRole.admin))])
 def blockchain_transactions() -> dict:
-    transactions = []
-    if ledger_records:
-        for index, (key, record) in enumerate(ledger_records.items(), start=1):
-            product_id, batch_id = key.split(":", 1)
-            transactions.append(
-                {
-                    "id": index,
-                    "transactionHash": record.get("ledger_hash"),
-                    "productBatch": batch_id,
-                    "manufacturer": "Global Supply Manufacturer",
-                    "status": "verified",
-                    "blockNumber": 18234567 + index,
-                    "gasFee": 45,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "productDetails": {
-                        "productId": product_id,
-                        "payload": record.get("payload", {}),
-                    },
-                }
-            )
-    total = len(transactions)
-    verified = len([tx for tx in transactions if tx.get("status") == "verified"])
-    pending = len([tx for tx in transactions if tx.get("status") == "pending"])
-    avg_gas = round(sum(float(tx.get("gasFee", 0) or 0) for tx in transactions) / max(total, 1), 2)
-    return {
-        "transactions": transactions,
-        "stats": {
-            "totalVerifications": total,
-            "successRate": round((verified / max(total, 1)) * 100, 2),
-            "avgGasFee": avg_gas,
-            "pendingTransactions": pending,
-        },
-    }
+    return build_admin_blockchain_transactions()
 
 
 @router.post("/blockchain/verify", dependencies=[Depends(require_roles(UserRole.admin))])
 def verify_blockchain_transaction(payload: dict) -> dict:
     tx_hash = str(payload.get("txHash", "")).strip()
-    return {"success": bool(tx_hash), "txHash": tx_hash}
+    if not tx_hash:
+        return {"success": False, "txHash": "", "message": "txHash required"}
+    return {
+        "success": get_ledger_record_by_tx_hash(tx_hash) is not None,
+        "txHash": tx_hash,
+    }
 
 
 @router.post("/reports/generate", dependencies=[Depends(require_roles(UserRole.admin))])
@@ -177,6 +158,9 @@ def generate_report(payload: dict) -> Response:
     end_date = str(payload.get("endDate", "2026-01-31"))
     report_format = str(payload.get("format", "pdf")).strip().lower()
 
+    metrics = summarize_global_metrics()
+    total_users = count_users()
+    total_orders = len(list_orders(limit=1000))
     if report_format == "csv":
         stream = io.StringIO()
         writer = csv.writer(stream)
@@ -184,10 +168,12 @@ def generate_report(payload: dict) -> Response:
         writer.writerow(["report_type", report_type])
         writer.writerow(["start_date", start_date])
         writer.writerow(["end_date", end_date])
-        writer.writerow(["total_users", len(users)])
-        writer.writerow(["total_products", len(products)])
-        writer.writerow(["total_batches", len(batches)])
-        writer.writerow(["active_shipments", len(shipments)])
+        writer.writerow(["total_users", total_users])
+        writer.writerow(["total_orders", total_orders])
+        writer.writerow(["total_products", metrics["total_products"]])
+        writer.writerow(["total_batches", metrics["total_batches"]])
+        writer.writerow(["active_shipments", metrics["active_shipments"]])
+        writer.writerow(["revenue", metrics["revenue"]])
         content = stream.getvalue().encode("utf-8")
         media_type = "text/csv"
         suffix = "csv"
@@ -196,10 +182,12 @@ def generate_report(payload: dict) -> Response:
             "Global Supply Chain Report",
             f"type: {report_type}",
             f"period: {start_date} to {end_date}",
-            f"total_users: {len(users)}",
-            f"total_products: {len(products)}",
-            f"total_batches: {len(batches)}",
-            f"active_shipments: {len(shipments)}",
+            f"total_users: {total_users}",
+            f"total_orders: {total_orders}",
+            f"total_products: {metrics['total_products']}",
+            f"total_batches: {metrics['total_batches']}",
+            f"active_shipments: {metrics['active_shipments']}",
+            f"revenue: {metrics['revenue']}",
             f"generated_at_utc: {datetime.now(timezone.utc).isoformat()}",
         ]
         content = "\n".join(lines).encode("utf-8")
