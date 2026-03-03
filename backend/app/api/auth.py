@@ -182,7 +182,7 @@ def send_otp(data: SendOTPRequest) -> dict:
     if not email_sent:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to send OTP email",
+            detail="Failed to send OTP email. Check SMTP configuration and sender credentials.",
         )
 
     payload: dict[str, object] = {
