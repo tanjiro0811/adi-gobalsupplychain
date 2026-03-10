@@ -9,6 +9,7 @@ import Production from './Production'
 import Inventory from './Inventory'
 import BlockchainRegister from './BlockchainRegister'
 import Analytics from './Analytics'
+import { StatCardSkeleton, TableSkeleton } from '../../components/ui/Skeleton'
 import './manufacturer.css'
 
 const baseHistory = [0, 0, 0, 0, 0, 0]
@@ -130,15 +131,28 @@ function ManufacturerDashboard({
       stats={stats}
       notifications={2}
     >
+      {/* Overview View */}
+      {activeView === 'overview' && isLoading && (
+        <>
+           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+             <StatCardSkeleton />
+             <StatCardSkeleton />
+             <StatCardSkeleton />
+             <StatCardSkeleton />
+             <StatCardSkeleton />
+           </div>
+           <TableSkeleton rows={3} cols={4} />
+           <div className="mt-6">
+             <StatCardSkeleton />
+           </div>
+        </>
+      )}
+
       {/* Navigation Tabs */}
       {/* Overview View */}
-      {activeView === 'overview' && (
+      {activeView === 'overview' && !isLoading && (
         <>
-          {isLoading ? (
-            <Loader label="Loading AI and batch data..." />
-          ) : (
-            <AreaChart title="AI Forecasting Trend" data={forecastSeries} />
-          )}
+          <AreaChart title="AI Forecasting Trend" data={forecastSeries} />
           <section style={{ marginTop: 14 }}>
             <Table
               columns={[

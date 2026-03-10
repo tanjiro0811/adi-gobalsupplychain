@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from jose import jwt
 from pydantic import BaseModel, Field
+from passlib.context import CryptContext
 
 from app.core.config import get_settings
 from app.core.middleware import get_current_payload, require_roles
@@ -19,17 +20,29 @@ from app.services.database_service import (
     create_guest_entry,
     create_user,
     get_user_by_email,
+    record_failed_login,
+    reset_failed_logins,
+    is_account_locked,
 )
 from app.services.email_service import get_email_service
 from app.services.otp_service import OTPService
 from app.services.state_service import users
 
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from fastapi import Request
+
 router = APIRouter(prefix="/auth", tags=["auth"])
+limiter = Limiter(key_func=get_remote_address)
 
 otp_service = OTPService()
 email_service = get_email_service()
-PASSWORD_SCHEME = "pbkdf2_sha256"
-PASSWORD_ITERATIONS = 120000
+
+pwd_context = CryptContext(
+    schemes=["bcrypt", "pbkdf2_sha256"],
+    deprecated="auto",
+    pbkdf2_sha256__default_rounds=120000
+)
 
 
 class LoginRequest(BaseModel):
@@ -57,9 +70,14 @@ class VerifyOTPRequest(BaseModel):
 
 class LoginResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     role: UserRole
     user: dict
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
 
 
 class RoleAssignmentRequest(BaseModel):
@@ -119,46 +137,41 @@ def normalize_role(role: UserRole | str) -> UserRole:
 
 
 def hash_password(password: str) -> str:
-    salt = os.urandom(16)
-    hash_bytes = hashlib.pbkdf2_hmac(
-        "sha256",
-        password.encode("utf-8"),
-        salt,
-        PASSWORD_ITERATIONS,
-    )
-    salt_encoded = base64.urlsafe_b64encode(salt).decode("utf-8")
-    hash_encoded = base64.urlsafe_b64encode(hash_bytes).decode("utf-8")
-    return f"{PASSWORD_SCHEME}${PASSWORD_ITERATIONS}${salt_encoded}${hash_encoded}"
+    return pwd_context.hash(password)
 
 
 def verify_password(plain_password: str, stored_password: str) -> bool:
-    parts = stored_password.split("$")
-    if len(parts) == 4 and parts[0] == PASSWORD_SCHEME:
-        try:
-            iterations = int(parts[1])
-            salt = base64.urlsafe_b64decode(parts[2].encode("utf-8"))
-            expected = base64.urlsafe_b64decode(parts[3].encode("utf-8"))
-        except (ValueError, TypeError):
-            return False
-
-        calculated = hashlib.pbkdf2_hmac(
-            "sha256",
-            plain_password.encode("utf-8"),
-            salt,
-            iterations,
-        )
-        return hmac.compare_digest(calculated, expected)
-
-    # Backward compatibility for seeded users with plain-text passwords.
-    return stored_password == plain_password
+    # Backward compatibility for plain text seeded users
+    if not stored_password.startswith(("$2b$", "pbkdf2_sha256$")):
+        return stored_password == plain_password
+    return pwd_context.verify(plain_password, stored_password)
 
 
 def create_access_token(subject: str, role: UserRole) -> str:
     settings = get_settings()
     now = datetime.now(timezone.utc)
-    expire_at = now + timedelta(minutes=settings.access_token_expire_minutes)
+    # Using hard-coded 15 minutes or config
+    minutes = settings.access_token_expire_minutes if settings.access_token_expire_minutes else 15
+    expire_at = now + timedelta(minutes=minutes)
     payload = {
         "sub": subject,
+        "type": "access",
+        "role": role.value,
+        "iat": int(now.timestamp()),
+        "exp": int(expire_at.timestamp()),
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.jwt_algorithm)
+
+
+def create_refresh_token(subject: str, role: UserRole) -> str:
+    settings = get_settings()
+    now = datetime.now(timezone.utc)
+    # Defaulting to 7 days config
+    days = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+    expire_at = now + timedelta(days=days)
+    payload = {
+        "sub": subject,
+        "type": "refresh",
         "role": role.value,
         "iat": int(now.timestamp()),
         "exp": int(expire_at.timestamp()),
@@ -167,7 +180,10 @@ def create_access_token(subject: str, role: UserRole) -> str:
 
 
 @router.post("/send-otp")
-def send_otp(data: SendOTPRequest) -> dict:
+@limiter.limit(lambda: os.getenv("RATE_LIMIT_AUTH", "5/minute"))
+def send_otp(request: Request, data: SendOTPRequest = Depends()) -> dict:
+    # We must read body manually or depend on it correctly for slowapi
+    ...
     email = normalize_email(data.email)
     try:
         existing_user = get_user_by_email(email)
@@ -220,8 +236,10 @@ def verify_otp(data: VerifyOTPRequest) -> dict:
 
 
 @router.post("/resend-otp")
-def resend_otp(data: SendOTPRequest) -> dict:
-    return send_otp(data)
+@limiter.limit(lambda: os.getenv("RATE_LIMIT_AUTH", "5/minute"))
+def resend_otp(request: Request, data: SendOTPRequest = Depends()) -> dict:
+    return send_otp(request, data)
+    return send_otp(request, data)
 
 
 @router.post("/signup", response_model=LoginResponse, status_code=status.HTTP_201_CREATED)
@@ -275,12 +293,14 @@ def signup(data: SignupRequest) -> LoginResponse:
     }
 
     token = create_access_token(subject=email, role=data.role)
+    refresh = create_refresh_token(subject=email, role=data.role)
 
     # Do not fail signup on welcome-mail delivery issues.
     email_service.send_welcome_email(email, data.name, data.role.value)
 
     return LoginResponse(
         access_token=token,
+        refresh_token=refresh,
         role=data.role,
         user={
             "id": db_user["id"],
@@ -292,7 +312,8 @@ def signup(data: SignupRequest) -> LoginResponse:
 
 
 @router.post("/login", response_model=LoginResponse)
-def login(data: LoginRequest) -> LoginResponse:
+@limiter.limit(lambda: os.getenv("RATE_LIMIT_AUTH", "5/minute"))
+def login(request: Request, data: LoginRequest = Depends()) -> LoginResponse:
     email = normalize_email(data.email)
     try:
         db_user = get_user_by_email(email)
@@ -301,13 +322,24 @@ def login(data: LoginRequest) -> LoginResponse:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database temporarily unavailable",
         ) from exc
+        
+    # Check if account is locked
+    if db_user and is_account_locked(db_user["id"]):
+        raise HTTPException(
+            status_code=status.HTTP_423_LOCKED,
+            detail="Account is temporarily locked due to too many failed login attempts. Try again later."
+        )
+
     if db_user is not None:
         db_role = normalize_role(db_user["role"])
         if not verify_password(data.password, db_user["password_hash"]):
+            record_failed_login(db_user["id"])
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials",
             )
+            
+        reset_failed_logins(db_user["id"])
 
         if db_role != data.role:
             raise HTTPException(
@@ -316,8 +348,10 @@ def login(data: LoginRequest) -> LoginResponse:
             )
 
         token = create_access_token(subject=email, role=db_role)
+        refresh = create_refresh_token(subject=email, role=db_role)
         return LoginResponse(
             access_token=token,
+            refresh_token=refresh,
             role=db_role,
             user={
                 "id": db_user["id"],
@@ -342,8 +376,10 @@ def login(data: LoginRequest) -> LoginResponse:
         )
 
     token = create_access_token(subject=email, role=user_role)
+    refresh = create_refresh_token(subject=email, role=user_role)
     return LoginResponse(
         access_token=token,
+        refresh_token=refresh,
         role=user_role,
         user={
             "email": user["email"],
@@ -351,6 +387,39 @@ def login(data: LoginRequest) -> LoginResponse:
             "role": user_role,
         },
     )
+
+
+@router.post("/refresh")
+def refresh_token(data: RefreshTokenRequest):
+    settings = get_settings()
+    try:
+        payload = jwt.decode(
+            data.refresh_token,
+            settings.secret_key,
+            algorithms=[settings.jwt_algorithm]
+        )
+        if payload.get("type") != "refresh":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token type"
+            )
+            
+        email = payload.get("sub")
+        role_str = payload.get("role")
+        if not email or not role_str:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload"
+            )
+            
+        role = normalize_role(role_str)
+        new_access_token = create_access_token(subject=email, role=role)
+        return {"access_token": new_access_token, "token_type": "bearer"}
+    except jwt.JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+        )
 
 
 @router.post(

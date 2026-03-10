@@ -18,8 +18,10 @@ from app.services.database_service import (
     get_order,
     get_product_by_sku,
     get_sales_analytics,
+    list_orders,
     list_products,
     record_sale,
+    create_order,
     update_order_stage,
 )
 from app.services.notification_service import notification_service
@@ -48,11 +50,11 @@ class SaleCreateRequest(BaseModel):
         )
     ],
 )
-def get_inventory() -> dict:
+def get_inventory(skip: int = Query(0, ge=0), limit: int = Query(100, le=1000)) -> dict:
     product_rows = []
     total_stock = 0
     total_inventory_value = 0.0
-    products = list_products()
+    products = list_products(skip=skip, limit=limit)
     for index, item in enumerate(products, start=1):
         quantity = int(item.get("quantity", 0))
         price = float(item.get("price", 0.0))
@@ -168,6 +170,44 @@ def create_sale(data: SaleCreateRequest) -> dict:
                 stage="sold",
                 status="sold",
             )
+            
+        # Automated Reorder Alert & Trigger
+        current_quantity = int(updated_product.get("quantity") or 0)
+        THRESHOLD = 50
+        if current_quantity < THRESHOLD:
+            pending_orders = [o for o in list_orders() if o.get("product_sku") == data.sku and o.get("status") not in ("delivered", "sold", "retail_received")]
+            if not pending_orders:
+                auto_order = create_order(
+                    retailer_name="Auto-Reorder System",
+                    retailer_email="system@globalsupply.com",
+                    dealer_id="dealer",
+                    product_sku=data.sku,
+                    quantity=100,
+                    origin="Manufacturer Hub",
+                    destination=data.retailer_name,
+                )
+                auto_tx = generate_tx_hash({"orderCode": auto_order["order_code"], "type": "auto_reorder", "sku": data.sku})
+                create_ledger_record(
+                    product_id=str(product.get("id")),
+                    batch_id="NA",
+                    event_stage="auto_reorder_triggered",
+                    payload={"orderCode": auto_order["order_code"], "reason": f"Stock depleted to {current_quantity}"},
+                    ledger_hash=generate_product_hash(str(product.get("id")), "NA", {"orderCode": auto_order["order_code"]}),
+                    tx_hash=auto_tx,
+                )
+                append_pipeline_event(
+                    order_code=auto_order["order_code"],
+                    product_sku=data.sku,
+                    stage="auto_reorder_triggered",
+                    tx_hash=auto_tx,
+                    payload={"message": f"Automated reorder triggered. Stock was {current_quantity} (threshold {THRESHOLD})"}
+                )
+                notification_service.publish(
+                    user_id="admin",
+                    title="Automated Reorder Triggered",
+                    message=f"Stock for {data.sku} fell to {current_quantity}. Auto-reordering 100 units.",
+                    metadata={"orderCode": auto_order["order_code"], "sku": data.sku}
+                )
     except DatabaseConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except DatabaseError as exc:

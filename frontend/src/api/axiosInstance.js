@@ -996,7 +996,7 @@ export const trackingApi = {
 
 export const inventoryApi = {
   getInventory: withFallback(
-    () => http.get('/inventory'),
+    (skip = 0, limit = 100) => http.get(`/inventory?skip=${skip}&limit=${limit}`),
     FALLBACK_RETAIL_INVENTORY,
     (payload) =>
       !Array.isArray(payload?.products) || !payload.products.length,

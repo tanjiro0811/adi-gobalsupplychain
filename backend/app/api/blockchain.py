@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import io
 import json
+import base64
 from typing import Optional
 from urllib.parse import quote
 
+import qrcode
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
@@ -115,9 +118,22 @@ def product_qr(product_sku: str) -> dict:
         "productSku": product_sku,
         "journey": journey,
     }
-    encoded = quote(json.dumps(qr_payload, separators=(",", ":"), ensure_ascii=True))
-    # Image URL generated from encoded payload; frontend can render directly.
-    qr_image_url = f"https://api.qrserver.com/v1/create-qr-code/?size=260x260&data={encoded}"
+    
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(json.dumps(qr_payload, separators=(",", ":")))
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    b64_img = base64.b64encode(buf.getvalue()).decode("utf-8")
+    qr_image_url = f"data:image/png;base64,{b64_img}"
+
     return {
         "productSku": product_sku,
         "qrPayload": qr_payload,

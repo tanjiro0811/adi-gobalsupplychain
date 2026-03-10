@@ -1,0 +1,43 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.8.2, pytest-8.0.0, pluggy-1.5.0 -- C:\Program Files\Python38\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\91797\OneDrive\Desktop\Global Supply  Chain project\backend
+plugins: anyio-4.5.2, asyncio-0.23.5
+asyncio: mode=strict
+collecting ... collected 0 items / 1 error
+
+=================================== ERRORS ====================================
+_____________________ ERROR collecting tests/test_api.py ______________________
+tests\test_api.py:4: in <module>
+    from run import app
+run.py:16: in <module>
+    from app.api import admin, auth, blockchain, dealer, inventory, manufacturer, tracking
+app\api\auth.py:184: in <module>
+    def send_otp(request: Request, data: SendOTPRequest = Depends()) -> dict:
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\fastapi\routing.py:995: in decorator
+    self.add_api_route(
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\fastapi\routing.py:934: in add_api_route
+    route = route_class(
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\fastapi\routing.py:555: in __init__
+    self.dependant = get_dependant(path=self.path_format, call=self.endpoint)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\fastapi\dependencies\utils.py:292: in get_dependant
+    sub_dependant = get_param_sub_dependant(
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\fastapi\dependencies\utils.py:126: in get_param_sub_dependant
+    return get_sub_dependant(
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\fastapi\dependencies\utils.py:162: in get_sub_dependant
+    sub_dependant = get_dependant(
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\fastapi\dependencies\utils.py:274: in get_dependant
+    endpoint_signature = get_typed_signature(call)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\fastapi\dependencies\utils.py:232: in get_typed_signature
+    signature = inspect.signature(call)
+C:\Program Files\Python38\lib\inspect.py:3093: in signature
+    return Signature.from_callable(obj, follow_wrapped=follow_wrapped)
+C:\Program Files\Python38\lib\inspect.py:2842: in from_callable
+    return _signature_from_callable(obj, sigcls=cls,
+C:\Program Files\Python38\lib\inspect.py:2216: in _signature_from_callable
+    raise TypeError('{!r} is not a callable object'.format(obj))
+E   TypeError: ForwardRef('SendOTPRequest') is not a callable object
+=========================== short test summary info ===========================
+ERROR tests/test_api.py - TypeError: ForwardRef('SendOTPRequest') is not a ca...
+!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+============================== 1 error in 3.15s ===============================

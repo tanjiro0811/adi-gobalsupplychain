@@ -47,6 +47,8 @@ users_table = Table(
     Column("email", String(160), nullable=False, unique=True),
     Column("password_hash", String(255), nullable=False),
     Column("role", String(40), nullable=False),
+    Column("failed_login_attempts", Integer, nullable=False, default=0),
+    Column("locked_until", DateTime(timezone=True), nullable=True),
     Column("created_at", DateTime(timezone=True), nullable=False),
 )
 
@@ -499,6 +501,8 @@ def create_user(name: str, email: str, password_hash: str, role: str) -> dict:
                     email=str(email).strip().lower(),
                     password_hash=password_hash,
                     role=role,
+                    failed_login_attempts=0,
+                    locked_until=None,
                     created_at=created_at,
                 )
             )
@@ -516,6 +520,55 @@ def create_user(name: str, email: str, password_hash: str, role: str) -> dict:
         "role": role,
         "created_at": created_at,
     }
+
+
+def is_account_locked(user_id: int) -> bool:
+    try:
+        with _engine().connect() as conn:
+            row = conn.execute(select(users_table).where(users_table.c.id == user_id)).first()
+            if not row:
+                return False
+            locked_until = row._mapping.get("locked_until")
+            if not locked_until:
+                return False
+            now = _utc_now()
+            # If locked_until is naive, make it aware (assuming UTC)
+            if locked_until.tzinfo is None:
+                locked_until = locked_until.replace(tzinfo=timezone.utc)
+            return now < locked_until
+    except SQLAlchemyError as exc:
+        raise DatabaseError("Failed to check if account is locked") from exc
+
+
+def record_failed_login(user_id: int, max_attempts: int = 5, lockout_minutes: int = 15) -> None:
+    try:
+        with _engine().begin() as conn:
+            row = conn.execute(select(users_table).where(users_table.c.id == user_id)).first()
+            if not row:
+                return
+            attempts = (row._mapping.get("failed_login_attempts") or 0) + 1
+            locked_until = None
+            if attempts >= max_attempts:
+                locked_until = _utc_now() + timedelta(minutes=lockout_minutes)
+            conn.execute(
+                users_table.update()
+                .where(users_table.c.id == user_id)
+                .values(failed_login_attempts=attempts, locked_until=locked_until)
+            )
+    except SQLAlchemyError as exc:
+        raise DatabaseError("Failed to record failed login") from exc
+
+
+def reset_failed_logins(user_id: int) -> None:
+    try:
+        with _engine().begin() as conn:
+            conn.execute(
+                users_table.update()
+                .where(users_table.c.id == user_id)
+                .values(failed_login_attempts=0, locked_until=None)
+            )
+    except SQLAlchemyError as exc:
+        raise DatabaseError("Failed to reset failed logins") from exc
 
 
 def create_guest_entry(
@@ -573,19 +626,29 @@ def count_guest_entries() -> int:
         raise DatabaseError("Failed to count guest entries") from exc
 
 
-def list_users() -> list[dict]:
+def list_users(skip: int = 0, limit: int = 100) -> list[dict]:
     try:
         with _engine().connect() as conn:
-            rows = conn.execute(select(users_table).order_by(users_table.c.id.asc())).fetchall()
+            rows = conn.execute(
+                select(users_table)
+                .order_by(users_table.c.id.asc())
+                .offset(skip)
+                .limit(limit)
+            ).fetchall()
             return [_row_to_dict(row) for row in rows]
     except SQLAlchemyError as exc:
         raise DatabaseError("Failed to list users") from exc
 
 
-def list_products() -> list[dict]:
+def list_products(skip: int = 0, limit: int = 100) -> list[dict]:
     try:
         with _engine().connect() as conn:
-            rows = conn.execute(select(products_table).order_by(products_table.c.id.asc())).fetchall()
+            rows = conn.execute(
+                select(products_table)
+                .order_by(products_table.c.id.asc())
+                .offset(skip)
+                .limit(limit)
+            ).fetchall()
             return [_row_to_dict(row) for row in rows]
     except SQLAlchemyError as exc:
         raise DatabaseError("Failed to list products") from exc
@@ -671,10 +734,15 @@ def decrement_product_stock(sku: str, quantity: int) -> dict:
         raise DatabaseError("Failed to update product stock") from exc
 
 
-def list_batches() -> list[dict]:
+def list_batches(skip: int = 0, limit: int = 100) -> list[dict]:
     try:
         with _engine().connect() as conn:
-            rows = conn.execute(select(batches_table).order_by(desc(batches_table.c.id))).fetchall()
+            rows = conn.execute(
+                select(batches_table)
+                .order_by(desc(batches_table.c.id))
+                .offset(skip)
+                .limit(limit)
+            ).fetchall()
             return [_row_to_dict(row) for row in rows]
     except SQLAlchemyError as exc:
         raise DatabaseError("Failed to list batches") from exc
@@ -813,11 +881,14 @@ def get_order(order_code: str) -> dict | None:
         raise DatabaseError("Failed to fetch order") from exc
 
 
-def list_orders(limit: int = 100) -> list[dict]:
+def list_orders(skip: int = 0, limit: int = 100) -> list[dict]:
     try:
         with _engine().connect() as conn:
             rows = conn.execute(
-                select(orders_table).order_by(desc(orders_table.c.updated_at)).limit(int(limit))
+                select(orders_table)
+                .order_by(desc(orders_table.c.updated_at))
+                .offset(skip)
+                .limit(int(limit))
             ).fetchall()
             return [_row_to_dict(row) for row in rows]
     except SQLAlchemyError as exc:
@@ -889,10 +960,15 @@ def update_shipment_location(*, shipment_id: str, lat: float, lng: float, status
         raise DatabaseError("Failed to update shipment location") from exc
 
 
-def list_shipments() -> dict[str, dict]:
+def list_shipments(skip: int = 0, limit: int = 100) -> dict[str, dict]:
     try:
         with _engine().connect() as conn:
-            rows = conn.execute(select(shipments_table).order_by(shipments_table.c.id.asc())).fetchall()
+            rows = conn.execute(
+                select(shipments_table)
+                .order_by(shipments_table.c.id.asc())
+                .offset(skip)
+                .limit(limit)
+            ).fetchall()
             mapped: dict[str, dict] = {}
             for row in rows:
                 item = _row_to_dict(row)
@@ -1066,11 +1142,14 @@ def get_ledger_record_by_tx_hash(tx_hash: str) -> dict | None:
         raise DatabaseError("Failed to query tx hash") from exc
 
 
-def list_ledger_records(limit: int = 100) -> list[dict]:
+def list_ledger_records(skip: int = 0, limit: int = 100) -> list[dict]:
     try:
         with _engine().connect() as conn:
             rows = conn.execute(
-                select(ledger_records_table).order_by(desc(ledger_records_table.c.created_at)).limit(limit)
+                select(ledger_records_table)
+                .order_by(desc(ledger_records_table.c.created_at))
+                .offset(skip)
+                .limit(limit)
             ).fetchall()
             return [_row_to_dict(row) for row in rows]
     except SQLAlchemyError as exc:

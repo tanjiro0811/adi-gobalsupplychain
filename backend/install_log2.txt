@@ -1,0 +1,4 @@
+﻿Defaulting to user installation because normal site-packages is not writeable
+Collecting fastapi==0.116.1 (from -r requirements.txt (line 1))
+  Using cached fastapi-0.116.1-py3-none-any.whl.metadata (28 kB)
+Requirement already satisfied: httpx<0.29,>=0.27 in c:\users\91797\appdata\roaming\python\python38\site-packages (from -r requirements.txt (line 3)) (0.28.1)

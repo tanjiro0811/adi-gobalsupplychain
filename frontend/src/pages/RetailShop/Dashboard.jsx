@@ -9,6 +9,7 @@ import Scanner from './Scanner'
 import Inventory from './Inventory'
 import Sales from './Sales'
 import { formatINR } from '../../utils/currency'
+import { StatCardSkeleton, TableSkeleton } from '../../components/ui/Skeleton'
 import './retail.css'
 
 const LIVE_REFRESH_MS = 15000
@@ -25,11 +26,16 @@ function RetailShopDashboard({
   const [activeView, setActiveView] = useState(initialView) // overview, pos, scanner, inventory, sales
   const [isOrdering, setIsOrdering] = useState(false)
   const [orderMessage, setOrderMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
 
   const loadRetailData = async () => {
-    const data = await inventoryApi.getInventory()
-    setProducts(data?.products ?? [])
-    setSalesData(data?.sales ?? [])
+    try {
+      const data = await inventoryApi.getInventory()
+      setProducts(data?.products ?? [])
+      setSalesData(data?.sales ?? [])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -44,6 +50,8 @@ function RetailShopDashboard({
         }
       } catch (error) {
         console.error('Failed to load retail data:', error)
+      } finally {
+        if (mounted) setIsLoading(false)
       }
     }
 
@@ -130,9 +138,22 @@ function RetailShopDashboard({
       stats={stats}
       notifications={4}
     >
+      {/* Overview View */}
+      {activeView === 'overview' && isLoading && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+             <StatCardSkeleton />
+             <StatCardSkeleton />
+             <StatCardSkeleton />
+             <StatCardSkeleton />
+          </div>
+          <TableSkeleton rows={5} cols={4} />
+        </>
+      )}
+
       {/* Navigation Tabs */}
       {/* Overview View */}
-      {activeView === 'overview' && (
+      {activeView === 'overview' && !isLoading && (
         <>
           <section style={{ marginBottom: 12 }}>
             <div style={{ background: '#eff6ff', borderRadius: 12, padding: 14, border: '1px solid #bfdbfe' }}>

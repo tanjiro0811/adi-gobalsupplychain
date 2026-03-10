@@ -6,6 +6,7 @@ import Table from '../../components/common/Table'
 import Loader from '../../components/common/Loader'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import { formatINR, parseAmount } from '../../utils/currency'
+import { StatCardSkeleton, TableSkeleton } from '../../components/ui/Skeleton'
 
 import './dealer.css'
 
@@ -207,7 +208,22 @@ function DealerDashboard({ user, onLogout, onNavigate, currentPath }) {
         stats={stats}
         notifications={1}
       >
-        <Loader label="Loading dealer dashboard..." />
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6 mt-14">
+           <StatCardSkeleton />
+           <StatCardSkeleton />
+           <StatCardSkeleton />
+           <StatCardSkeleton />
+           <StatCardSkeleton />
+           <StatCardSkeleton />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+           <div className="col-span-2">
+             <TableSkeleton rows={4} cols={5} />
+           </div>
+           <div className="col-span-1 mt-6">
+             <StatCardSkeleton />
+           </div>
+        </div>
       </DashboardLayout>
     )
   }

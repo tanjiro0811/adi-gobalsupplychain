@@ -1,0 +1,111 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.8.2, pytest-8.0.0, pluggy-1.5.0 -- C:\Program Files\Python38\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\91797\OneDrive\Desktop\Global Supply  Chain project\backend
+plugins: anyio-4.5.2, asyncio-0.23.5
+asyncio: mode=strict
+collecting ... collected 0 items / 1 error
+
+=================================== ERRORS ====================================
+_____________________ ERROR collecting tests/test_api.py ______________________
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\engine\base.py:145: in __init__
+    self._dbapi_connection = engine.raw_connection()
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\engine\base.py:3297: in raw_connection
+    return self.pool.connect()
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\base.py:449: in connect
+    return _ConnectionFairy._checkout(self)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\base.py:1264: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\base.py:713: in checkout
+    rec = pool._do_get()
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\impl.py:180: in _do_get
+    self._dec_overflow()
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\util\langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\impl.py:177: in _do_get
+    return self._create_connection()
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\base.py:390: in _create_connection
+    return _ConnectionRecord(self)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\base.py:675: in __init__
+    self.__connect()
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\base.py:902: in __connect
+    pool.logger.debug("Error on connect(): %s", e)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\util\langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\base.py:897: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\engine\create.py:646: in connect
+    return dialect.connect(*cargs, **cparams)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\engine\default.py:625: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\psycopg2\__init__.py:122: in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+E   psycopg2.OperationalError: connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+
+The above exception was the direct cause of the following exception:
+app\services\database_service.py:467: in initialize_database
+    metadata.create_all(_engine())
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\sql\schema.py:5924: in create_all
+    bind._run_ddl_visitor(
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\engine\base.py:3247: in _run_ddl_visitor
+    with self.begin() as conn:
+C:\Program Files\Python38\lib\contextlib.py:113: in __enter__
+    return next(self.gen)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\engine\base.py:3237: in begin
+    with self.connect() as conn:
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\engine\base.py:3273: in connect
+    return self._connection_cls(self)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\engine\base.py:147: in __init__
+    Connection._handle_dbapi_exception_noconnection(
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\engine\base.py:2436: in _handle_dbapi_exception_noconnection
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\engine\base.py:145: in __init__
+    self._dbapi_connection = engine.raw_connection()
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\engine\base.py:3297: in raw_connection
+    return self.pool.connect()
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\base.py:449: in connect
+    return _ConnectionFairy._checkout(self)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\base.py:1264: in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\base.py:713: in checkout
+    rec = pool._do_get()
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\impl.py:180: in _do_get
+    self._dec_overflow()
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\util\langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\impl.py:177: in _do_get
+    return self._create_connection()
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\base.py:390: in _create_connection
+    return _ConnectionRecord(self)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\base.py:675: in __init__
+    self.__connect()
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\base.py:902: in __connect
+    pool.logger.debug("Error on connect(): %s", e)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\util\langhelpers.py:224: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\pool\base.py:897: in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\engine\create.py:646: in connect
+    return dialect.connect(*cargs, **cparams)
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\sqlalchemy\engine\default.py:625: in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+..\..\..\..\AppData\Roaming\Python\Python38\site-packages\psycopg2\__init__.py:122: in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+E   sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) connection to server at "localhost" (::1), port 5432 failed: FATAL:  password authentication failed for user "postgres"
+E   
+E   (Background on this error at: https://sqlalche.me/e/20/e3q8)
+
+The above exception was the direct cause of the following exception:
+tests\test_api.py:4: in <module>
+    from run import app
+run.py:129: in <module>
+    app = create_app()
+run.py:28: in create_app
+    initialize_database()
+app\services\database_service.py:470: in initialize_database
+    raise DatabaseError("Database initialization failed") from exc
+E   app.services.database_service.DatabaseError: Database initialization failed
+=========================== short test summary info ===========================
+ERROR tests/test_api.py - app.services.database_service.DatabaseError: Databa...
+!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+============================== 1 error in 4.63s ===============================

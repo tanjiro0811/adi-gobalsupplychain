@@ -152,3 +152,56 @@ def predict_delay_risk(distance_km: float, weather_score: float, traffic_score: 
     """Returns a normalized delay probability in range [0, 1]."""
     raw = (distance_km / 1200) * 0.4 + weather_score * 0.3 + traffic_score * 0.3
     return round(max(0.0, min(1.0, raw)), 3)
+
+
+def predict_low_stock(inventory_data: list[dict], api_key: str) -> list[dict]:
+    """Uses Gemini to analyze inventory and sales data and predict stockouts."""
+    if not api_key:
+        return inventory_data
+
+    endpoint = f"{_GEMINI_BASE_URL}/{_GEMINI_MODEL}:generateContent?{url_parse.urlencode({'key': api_key})}"
+    prompt = (
+        "You are an AI supply chain analyst. "
+        "Review this inventory data and predict which products will run low first. "
+        f"Data: {json.dumps(inventory_data)}\n"
+        "Return compact JSON containing an array of objects under the key 'recommendations'. "
+        "Each object must have 'sku', 'priority' ('high', 'medium', 'low'), and 'recommendation' (a short sentence explaining why). "
+        "Keep the same skus. Provide an insightful AI-driven recommendation."
+    )
+    payload = {
+        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.3,
+            "response_mime_type": "application/json",
+        },
+    }
+
+    request = url_request.Request(
+        endpoint,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with url_request.urlopen(request, timeout=5.0) as response:
+            raw_body = response.read().decode("utf-8")
+        parsed = json.loads(raw_body)
+        text = _extract_candidate_text(parsed)
+        extracted = _extract_json_payload(text)
+        if isinstance(extracted, dict) and "recommendations" in extracted:
+            ai_recs = extracted["recommendations"]
+            # Merge back with original
+            merged = []
+            for item in inventory_data:
+                sku = item.get("sku")
+                matching = next((r for r in ai_recs if r.get("sku") == sku), {})
+                merged.append({
+                    **item,
+                    "recommendation": matching.get("recommendation", item.get("recommendation")),
+                    "priority": matching.get("priority", item.get("priority"))
+                })
+            return merged
+    except Exception:
+        pass
+
+    return inventory_data

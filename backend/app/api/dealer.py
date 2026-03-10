@@ -22,6 +22,8 @@ from app.services.database_service import (
     reorder_recommendations,
     update_order_stage,
 )
+from app.services.ai_service import predict_low_stock
+from app.core.config import get_settings
 from app.services.notification_service import notification_service
 
 router = APIRouter(prefix="/dealer", tags=["dealer"])
@@ -336,6 +338,9 @@ def arrivals() -> dict:
 def ai_reorder_recommendations(days: int = Query(30, ge=7, le=120)) -> dict:
     try:
         items = reorder_recommendations(days=days)
+        api_key = get_settings().gemini_api_key
+        if api_key:
+            items = predict_low_stock(items, api_key)
     except DatabaseError as exc:
         raise HTTPException(status_code=503, detail="Database temporarily unavailable") from exc
     return {"items": items}
