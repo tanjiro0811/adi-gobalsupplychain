@@ -143,6 +143,8 @@ python scripts/smtp_check.py --to you@example.com --dry-run
 python scripts/smtp_check.py --to you@example.com
 ```
 
+If you're using Gmail as the relay, `SENDER_PASSWORD` must be a Gmail App Password (you need 2-Step Verification enabled). A normal Gmail password will fail or disconnect.
+
 ### Frontend (optional)
 
 - `VITE_API_BASE_URL` (default: `/api`)

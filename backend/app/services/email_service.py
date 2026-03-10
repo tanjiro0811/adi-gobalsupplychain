@@ -29,6 +29,11 @@ class EmailService:
         text_content: Optional[str] = None,
     ) -> bool:
         try:
+            if "gmail" in str(self.smtp_server).lower() and not str(self.sender_password or "").strip():
+                print(f"Email send failed to {to_email}: Gmail SMTP requires an App Password.")
+                print("Tip: Enable 2-Step Verification on the sender Gmail account and generate an App Password.")
+                return False
+
             recipient = str(to_email or "").strip()
             _, parsed_recipient = parseaddr(recipient)
             if "@" not in parsed_recipient:

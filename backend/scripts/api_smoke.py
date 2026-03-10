@@ -1,11 +1,30 @@
 from __future__ import annotations
 
+import argparse
 import json
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
+
+def _parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Backend API + WebSocket smoke test (in-process).")
+    parser.add_argument(
+        "--real-email",
+        action="store_true",
+        help="Do not force MOCK_EMAIL_DELIVERY=true for this test run.",
+    )
+    return parser.parse_args()
+
+
+args = _parse_args()
+
+# Keep tests fast + deterministic by default (no external SMTP dependency).
+if not args.real_email:
+    os.environ.setdefault("MOCK_EMAIL_DELIVERY", "true")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import run  # noqa: E402
@@ -54,6 +73,26 @@ def _safe_json(resp) -> str:
 def main() -> int:
     client = TestClient(run.app)
 
+    ok = True
+
+    # Public endpoints: OTP + health.
+    otp_email = f"otp-smoke-{uuid4().hex[:10]}@example.com"
+    send_otp = client.post("/api/auth/send-otp", json={"email": otp_email, "name": "Smoke"})
+    ok &= _check(
+        send_otp.status_code == 200,
+        "POST /api/auth/send-otp",
+        status_code=send_otp.status_code,
+        details=_safe_json(send_otp),
+    )
+    otp_value = (send_otp.json() or {}).get("otp")
+    verify_otp = client.post("/api/auth/verify-otp", json={"email": otp_email, "otp": otp_value or "000000"})
+    ok &= _check(
+        verify_otp.status_code == 200 and bool((verify_otp.json() or {}).get("valid")),
+        "POST /api/auth/verify-otp",
+        status_code=verify_otp.status_code,
+        details=_safe_json(verify_otp),
+    )
+
     principals = {
         "admin": Principal("admin@globalsupply.com", "admin123", "admin"),
         "manufacturer": Principal("manufacturer@globalsupply.com", "maker123", "manufacturer"),
@@ -65,8 +104,6 @@ def main() -> int:
     tokens: dict[str, str] = {}
     for key, principal in principals.items():
         tokens[key] = _login(client, principal)
-
-    ok = True
 
     # Health is public.
     health = client.get("/health")

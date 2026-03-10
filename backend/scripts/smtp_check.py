@@ -85,6 +85,11 @@ def main() -> int:
         print("Set MOCK_EMAIL_DELIVERY=false and rerun to test the relay.")
         return 2
 
+    if "gmail" in str(smtp_server).lower() and not sender_password.strip() and not args.no_login:
+        print("FAIL: Gmail SMTP requires an App Password (SENDER_PASSWORD).")
+        print("Tip: Enable 2-Step Verification and generate a 16-character App Password.")
+        return 2
+
     if "gmail" in str(smtp_server).lower() and sender_password and len(sender_password.strip()) < 12:
         print("Note: Gmail typically requires an App Password (16 chars) for SMTP AUTH.")
 
@@ -124,4 +129,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
