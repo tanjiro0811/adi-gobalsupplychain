@@ -1,10 +1,4 @@
-const ROLE_LINKS = {
-  Admin: ['Dashboard', 'Analytics', 'AI Chat', 'Blockchain Monitor', 'Reports'],
-  Manufacturer: ['Dashboard', 'Production', 'AI Forecast', 'AI Chat', 'Ledger Feed', 'Inventory'],
-  Transporter: ['Dashboard', 'Live Map', 'AI Chat', 'AI Routes', 'Fleet Alerts', 'Shipments'],
-  Dealer: ['Dashboard', 'Analytics', 'AI Chat', 'Orders', 'Inventory', 'Arrivals'],
-  RetailShop: ['Dashboard', 'AI Chat', 'Scanner', 'Verification', 'Sales', 'POS'],
-}
+import { ROLE_LINKS } from './navConfig'
 
 function Sidebar({ role, activeLink = 'Dashboard', onNavigate }) {
   const links = ROLE_LINKS[role] ?? ['Dashboard']

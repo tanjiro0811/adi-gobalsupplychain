@@ -161,7 +161,7 @@ If you still see `EMAIL MOCK` in the backend logs while `MOCK_EMAIL_DELIVERY=fal
 - Put sensitive keys in `.env` (example: `ANTHROPIC_API_KEY=...`).
 - `.env` is ignored by git (`.gitignore` includes `.env` and `.env.*`).
 - Use `.env.example` files for safe placeholders only.
-- `.env.example` files in this repo keep `ANTHROPIC_API_KEY` blank; set real values in your shell or local `backend/.env` copy so secrets never land in source control.
+- `.env.example` files in this repo use placeholders (never real keys). Set real values in your shell or local `backend/.env` copy so secrets never land in source control.
 - The backend loads both `./.env` and `backend/.env`; if the same key appears in both files, `backend/.env` wins (shell environment variables still win over both).
 
 ### Render PostgreSQL Setup
@@ -308,7 +308,7 @@ Dashboard pages and the API functions they use:
 
 ### Showcase experiences for judges
 1. **Working QR Scanner (`frontend/src/pages/RetailShop/Scanner.jsx`):** Show the quick-scan buttons or enter codes manually, then point a webcam-phone at the booth to highlight the animated scanner, blockchain verification badge, and live QR render. The page calls `/blockchain/qr/{sku}`, `/blockchain/journey/{sku}`, and the new `/blockchain/journey-summary/{sku}` so every scan provides both visual verification and an AI-generated narrative on stage.
-2. **Product Journey Timeline:** Once a product is scanned, the same view renders the `journey` trail from the blockchain service, showing every ledger stage as stacked cards with timestamps and TX hashes—this single screen is the “wow moment” that proves traceability end-to-end.
+2. **Product Journey Timeline:** Once a product is scanned, the same view renders the `journey` trail from the blockchain service, showing every ledger stage as stacked cards with timestamps and TX hashes - this single screen is the "wow moment" that proves traceability end-to-end.
 3. **Live ETA Countdown (`frontend/src/pages/Dealer/Arrivals.jsx`):** The dealer arrivals view now keeps a live clock (updates every second) and surfaces a highlighted countdown card next to the selected shipment so you can demo an actionable ETA in real time, even while other data flows in via the GPS socket.
 
 ## Notes

@@ -4,6 +4,7 @@ import Sidebar from './Sidebar'
 import UserMenu from '../navigation/UserMenu'
 import StatCard from '../ui/StatCard'
 import DashboardReportSection from './DashboardReportSection'
+import { PATH_BY_ROLE_LINK, SOCKET_USER_BY_ROLE } from './navConfig'
 
 const ROLE_COLORS = {
   Admin:        '#00fff7', // electric cyan
@@ -15,55 +16,7 @@ const ROLE_COLORS = {
 
 const DEFAULT_SPARK = [16, 20, 18, 24, 22, 28, 30]
 
-const PATH_BY_ROLE_LINK = {
-  Admin: {
-    Dashboard: '/admin/dashboard',
-    Analytics: '/admin/analytics',
-    'AI Chat': '/admin/chat',
-    'Blockchain Monitor': '/admin/blockchain',
-    Reports: '/admin/reports',
-  },
-  Manufacturer: {
-    Dashboard: '/manufacturer/dashboard',
-    Production: '/manufacturer/production',
-    'AI Forecast': '/manufacturer/analytics',
-    'AI Chat': '/manufacturer/chat',
-    'Ledger Feed': '/manufacturer/blockchain',
-    Inventory: '/manufacturer/inventory',
-  },
-  Transporter: {
-    Dashboard: '/transporter/dashboard',
-    'Live Map': '/transporter/map',
-    'AI Chat': '/transporter/chat',
-    'AI Routes': '/transporter/analytics',
-    'Fleet Alerts': '/transporter/fleet',
-    Shipments: '/transporter/shipments',
-  },
-  Dealer: {
-    Dashboard: '/dealer/dashboard',
-    Analytics: '/dealer/analytics',
-    'AI Chat': '/dealer/chat',
-    Orders: '/dealer/orders',
-    Inventory: '/dealer/inventory',
-    Arrivals: '/dealer/arrivals',
-  },
-  RetailShop: {
-    Dashboard: '/retail/dashboard',
-    'AI Chat': '/retail/chat',
-    Scanner: '/retail/scanner',
-    Verification: '/retail/inventory',
-    Sales: '/retail/sales',
-    POS: '/retail/pos',
-  },
-}
 
-const SOCKET_USER_BY_ROLE = {
-  Admin: 'admin',
-  Manufacturer: 'manufacturer',
-  Transporter: 'transporter',
-  Dealer: 'dealer',
-  RetailShop: 'retail_shop',
-}
 
 function getLinkForPath(role, path) {
   const linkMap = PATH_BY_ROLE_LINK[role]

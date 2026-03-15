@@ -13,7 +13,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import admin, auth, blockchain, chat, dealer, inventory, manufacturer, tracking
+from app.api import admin, auth, blockchain, dealer, inventory, manufacturer, tracking
 from app.core.config import ConfigurationError, get_settings, validate_settings
 from app.api.tracking import get_tracking_socket_payload
 from app.services.database_service import DatabaseError, check_database_connection, initialize_database
@@ -44,7 +44,6 @@ def create_app() -> FastAPI:
     app.include_router(blockchain.router, prefix="/api")
     app.include_router(dealer.router, prefix="/api")
     app.include_router(inventory.router, prefix="/api")
-    app.include_router(chat.router, prefix="/api")
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(_: Request, exc: RequestValidationError) -> JSONResponse:

@@ -53,6 +53,12 @@ _CACHE_TTL       = 300   # seconds
 _CACHE_MAX_SIZE  = 256
 
 
+def _current_model() -> str:
+    settings = get_settings()
+    candidate = (getattr(settings, "anthropic_model", "") or _MODEL).strip()
+    return candidate or _MODEL
+
+
 # ── LRU Response Cache ────────────────────────────────────────────────────────
 
 @dataclass
@@ -264,7 +270,7 @@ def _call(
     if anthropic is None:
         return ""
 
-    cache_key = system + "|||" + user
+    cache_key = _current_model() + "|||" + system + "|||" + user
     if use_cache:
         cached = _cache.get(cache_key)
         if cached is not None:
@@ -275,7 +281,7 @@ def _call(
         try:
             client = _get_client()
             msg = client.messages.create(
-                model=_MODEL,
+                model=_current_model(),
                 max_tokens=max_tokens,
                 system=system,
                 messages=[{"role": "user", "content": user}],
@@ -329,71 +335,26 @@ def stream_chat_response(
     question: str,
     context_data: dict | None = None,
     conversation_history: list[dict] | None = None,
+    *,
+    allow_data_tools: bool = False,
 ) -> Iterator[str]:
-    """
-    Yield text chunks for real-time streaming to the frontend.
-
-    FastAPI SSE example:
-        from fastapi.responses import StreamingResponse
-        return StreamingResponse(
-            (f"data: {chunk}\n\n" for chunk in stream_chat_response(q, ctx)),
-            media_type="text/event-stream"
-        )
-    """
-    if not str(question or "").strip():
-        yield "Please provide a question."
-        return
-
-    if anthropic is None:
-        yield "AI service unavailable."
-        return
-
-    api_key = (getattr(get_settings(), "anthropic_api_key", "") or "").strip()
-    if not api_key:
-        yield "AI is not configured (missing ANTHROPIC_API_KEY)."
-        return
-
-    messages = list(conversation_history or [])
-    content = question
-    if context_data:
-        content += f"\n\nPlatform data context:\n{json.dumps(context_data, indent=2)}"
-    messages.append({"role": "user", "content": content})
-
-    try:
-        client = _get_client()
-        with client.messages.stream(
-            model=_MODEL,
-            max_tokens=1024,
-            system=_PROMPTS["chatbot"],
-            messages=messages,
-        ) as stream:
-            for chunk in stream.text_stream:
-                yield chunk
-    except Exception as exc:
-        logger.exception("ai_service: streaming error: %s", exc)
-        yield "\n[Stream interrupted — please retry.]"
+    """Deprecated: chat streaming has been removed from this build."""
+    if False:
+        yield ""
+    return
 
 
 async def astream_chat_response(
     question: str,
     context_data: dict | None = None,
     conversation_history: list[dict] | None = None,
+    *,
+    allow_data_tools: bool = False,
 ) -> AsyncIterator[str]:
-    """Async generator — wraps stream_chat_response for use with async frameworks."""
-    loop = asyncio.get_event_loop()
-    queue: asyncio.Queue[str | None] = asyncio.Queue()
-
-    def _run() -> None:
-        for chunk in stream_chat_response(question, context_data, conversation_history):
-            loop.call_soon_threadsafe(queue.put_nowait, chunk)
-        loop.call_soon_threadsafe(queue.put_nowait, None)
-
-    loop.run_in_executor(None, _run)
-    while True:
-        chunk = await queue.get()
-        if chunk is None:
-            break
-        yield chunk
+    """Deprecated: chat streaming has been removed from this build."""
+    if False:
+        yield ""
+    return
 
 
 # ── Text / JSON helpers ───────────────────────────────────────────────────────
@@ -775,39 +736,7 @@ def summarize_product_journey(journey: list[dict]) -> dict:
     }
 
 
-# ── 7. AI Chatbot (multi-turn + streaming) ────────────────────────────────────
-
-def answer_supply_chain_query(
-    question: str,
-    context_data: dict | None = None,
-    conversation_history: list[dict] | None = None,
-) -> str:
-    """
-    Answer a free-form supply chain question with optional conversation memory.
-    For streaming, use stream_chat_response() instead.
-    """
-    if anthropic is None:
-        return "AI service is currently unavailable."
-
-    messages = list(conversation_history or [])
-    content = question
-    if context_data:
-        content += f"\n\nPlatform data context:\n{json.dumps(context_data, indent=2)}"
-    messages.append({"role": "user", "content": content})
-
-    try:
-        client = _get_client()
-        msg = client.messages.create(
-            model=_MODEL,
-            max_tokens=1024,
-            system=_PROMPTS["chatbot"],
-            messages=messages,
-        )
-        return _extract_text(msg) or "No response generated."
-    except Exception as exc:
-        logger.exception("ai_service: chatbot error: %s", exc)
-        return "AI service encountered an error. Please try again."
-
+# 7. (Chat removed)
 
 # ── 8. Dashboard Insights ─────────────────────────────────────────────────────
 
