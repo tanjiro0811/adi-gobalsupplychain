@@ -1,9 +1,9 @@
 const ROLE_LINKS = {
-  Admin: ['Dashboard', 'Analytics', 'Blockchain Monitor', 'Reports'],
-  Manufacturer: ['Dashboard', 'Production', 'AI Forecast', 'Ledger Feed', 'Inventory'],
-  Transporter: ['Dashboard', 'Live Map', 'AI Routes', 'Fleet Alerts', 'Shipments'],
-  Dealer: ['Dashboard', 'Analytics', 'Orders', 'Inventory', 'Arrivals'],
-  RetailShop: ['Dashboard', 'Scanner', 'Verification', 'Sales', 'POS'],
+  Admin: ['Dashboard', 'Analytics', 'AI Chat', 'Blockchain Monitor', 'Reports'],
+  Manufacturer: ['Dashboard', 'Production', 'AI Forecast', 'AI Chat', 'Ledger Feed', 'Inventory'],
+  Transporter: ['Dashboard', 'Live Map', 'AI Chat', 'AI Routes', 'Fleet Alerts', 'Shipments'],
+  Dealer: ['Dashboard', 'Analytics', 'AI Chat', 'Orders', 'Inventory', 'Arrivals'],
+  RetailShop: ['Dashboard', 'AI Chat', 'Scanner', 'Verification', 'Sales', 'POS'],
 }
 
 function Sidebar({ role, activeLink = 'Dashboard', onNavigate }) {

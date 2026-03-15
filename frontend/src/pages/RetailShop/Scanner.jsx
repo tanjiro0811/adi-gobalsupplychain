@@ -366,7 +366,7 @@ function Scanner({ products = [] }) {
                     <p className="eta-label">Live ETA Countdown</p>
                     <p className="eta-value">{etaLabel}</p>
                     <p className="eta-stage">Tracking stage: {activeStageLabel}</p>
-                    <p className="eta-hint">Powered by blockchain telemetry + Gemini AI delay risk</p>
+                    <p className="eta-hint">Powered by blockchain telemetry + AI delay risk</p>
                   </div>
                 </div>
               )}

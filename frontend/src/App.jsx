@@ -19,6 +19,7 @@ const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'))
 const AdminAnalytics = lazy(() => import('./pages/Admin/Analytics'))
 const AdminBlockchainMonitor = lazy(() => import('./pages/Admin/BlockchainMonitor'))
 const AdminSystemReport = lazy(() => import('./pages/Admin/Systemreport'))
+const AIChat = lazy(() => import('./pages/Shared/AIChat'))
 const ManufacturerDashboard = lazy(() => import('./pages/Manufacturer/Dashboard'))
 const TransporterDashboard = lazy(() => import('./pages/Transporter/Dashboard'))
 const DealerDashboard = lazy(() => import('./pages/Dealer/Dashboard'))
@@ -48,6 +49,9 @@ function getRoleView(role, pathname) {
   const normalizedPath = String(pathname || '').toLowerCase()
 
   if (role === 'Admin') {
+    if (normalizedPath === '/admin/chat') {
+      return { Component: AIChat, viewProps: { role: 'Admin' } }
+    }
     const map = {
       '/admin': AdminDashboard,
       '/admin/dashboard': AdminDashboard,
@@ -61,6 +65,9 @@ function getRoleView(role, pathname) {
   }
 
   if (role === 'Manufacturer') {
+    if (normalizedPath === '/manufacturer/chat') {
+      return { Component: AIChat, viewProps: { role: 'Manufacturer' } }
+    }
     const viewByPath = {
       '/manufacturer': 'overview',
       '/manufacturer/dashboard': 'overview',
@@ -77,6 +84,9 @@ function getRoleView(role, pathname) {
   }
 
   if (role === 'Transporter') {
+    if (normalizedPath === '/transporter/chat') {
+      return { Component: AIChat, viewProps: { role: 'Transporter' } }
+    }
     const viewByPath = {
       '/transporter': 'overview',
       '/transporter/dashboard': 'overview',
@@ -94,6 +104,9 @@ function getRoleView(role, pathname) {
   }
 
   if (role === 'Dealer') {
+    if (normalizedPath === '/dealer/chat') {
+      return { Component: AIChat, viewProps: { role: 'Dealer' } }
+    }
     const map = {
       '/dealer': DealerDashboard,
       '/dealer/dashboard': DealerDashboard,
@@ -108,6 +121,9 @@ function getRoleView(role, pathname) {
   }
 
   if (role === 'RetailShop') {
+    if (normalizedPath === '/retail/chat') {
+      return { Component: AIChat, viewProps: { role: 'RetailShop' } }
+    }
     const viewByPath = {
       '/retail': 'overview',
       '/retail/dashboard': 'overview',

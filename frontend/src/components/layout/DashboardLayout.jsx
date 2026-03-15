@@ -19,6 +19,7 @@ const PATH_BY_ROLE_LINK = {
   Admin: {
     Dashboard: '/admin/dashboard',
     Analytics: '/admin/analytics',
+    'AI Chat': '/admin/chat',
     'Blockchain Monitor': '/admin/blockchain',
     Reports: '/admin/reports',
   },
@@ -26,12 +27,14 @@ const PATH_BY_ROLE_LINK = {
     Dashboard: '/manufacturer/dashboard',
     Production: '/manufacturer/production',
     'AI Forecast': '/manufacturer/analytics',
+    'AI Chat': '/manufacturer/chat',
     'Ledger Feed': '/manufacturer/blockchain',
     Inventory: '/manufacturer/inventory',
   },
   Transporter: {
     Dashboard: '/transporter/dashboard',
     'Live Map': '/transporter/map',
+    'AI Chat': '/transporter/chat',
     'AI Routes': '/transporter/analytics',
     'Fleet Alerts': '/transporter/fleet',
     Shipments: '/transporter/shipments',
@@ -39,12 +42,14 @@ const PATH_BY_ROLE_LINK = {
   Dealer: {
     Dashboard: '/dealer/dashboard',
     Analytics: '/dealer/analytics',
+    'AI Chat': '/dealer/chat',
     Orders: '/dealer/orders',
     Inventory: '/dealer/inventory',
     Arrivals: '/dealer/arrivals',
   },
   RetailShop: {
     Dashboard: '/retail/dashboard',
+    'AI Chat': '/retail/chat',
     Scanner: '/retail/scanner',
     Verification: '/retail/inventory',
     Sales: '/retail/sales',
