@@ -209,20 +209,7 @@ export default function FeedbackForm({ initialData = null, onSubmitted }) {
           <p className="fb-subtitle">
             Help us improve the platform. Your insights shape the next version of the system.
           </p>
-          <div className="fb-stats">
-            <div className="fb-stat">
-              <span className="fb-stat-num">12.4K</span>
-              <span className="fb-stat-lbl">Responses</span>
-            </div>
-            <div className="fb-stat">
-              <span className="fb-stat-num">98%</span>
-              <span className="fb-stat-lbl">Actioned</span>
-            </div>
-            <div className="fb-stat">
-              <span className="fb-stat-num">4.8★</span>
-              <span className="fb-stat-lbl">Avg Rating</span>
-            </div>
-          </div>
+
         </div>
 
         {/* ── Progress bar ── */}
