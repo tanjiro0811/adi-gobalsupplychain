@@ -195,4 +195,14 @@ if __name__ == "__main__":
         )
         sys.exit(1)
 
-    uvicorn.run("run:app", host=host, port=port, reload=reload_enabled)
+    log_level = (os.getenv("UVICORN_LOG_LEVEL") or os.getenv("LOG_LEVEL") or "warning").strip().lower()
+    access_log_enabled = (os.getenv("UVICORN_ACCESS_LOG") or "false").strip().lower() in {"1", "true", "yes", "on"}
+    print(f"[startup] API listening on http://{host}:{port} (log_level={log_level}, access_log={access_log_enabled})")
+    uvicorn.run(
+        "run:app",
+        host=host,
+        port=port,
+        reload=reload_enabled,
+        log_level=log_level,
+        access_log=access_log_enabled,
+    )

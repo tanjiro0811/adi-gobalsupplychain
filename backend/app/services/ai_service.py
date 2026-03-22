@@ -250,9 +250,12 @@ Respond ONLY in valid JSON with this exact schema:
 # ── Core Claude caller: retry + cache ─────────────────────────────────────────
 
 def _get_client():
+    if anthropic is None:
+        return None
+
     key = (getattr(get_settings(), "anthropic_api_key", "") or "").strip()
     if not key:
-        raise ValueError("ANTHROPIC_API_KEY is not configured")
+        return None
     try:
         return anthropic.Anthropic(api_key=key, timeout=_TIMEOUT)
     except TypeError:
@@ -267,7 +270,8 @@ def _call(
     use_cache: bool = True,
 ) -> str:
     """Call Claude with retry + exponential back-off + LRU cache."""
-    if anthropic is None:
+    client = _get_client()
+    if client is None:
         return ""
 
     cache_key = _current_model() + "|||" + system + "|||" + user
@@ -279,7 +283,6 @@ def _call(
 
     for attempt in range(_MAX_RETRIES):
         try:
-            client = _get_client()
             msg = client.messages.create(
                 model=_current_model(),
                 max_tokens=max_tokens,
@@ -312,7 +315,8 @@ def _call(
             time.sleep(_RETRY_BASE_WAIT)
 
         except Exception as exc:
-            logger.exception("ai_service: unexpected error: %s", exc)
+            # Avoid noisy stack traces for expected "AI disabled / not configured" demo setups.
+            logger.debug("ai_service: unexpected error: %s", exc, exc_info=True)
             return ""
 
     return ""

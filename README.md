@@ -53,6 +53,10 @@ python run.py
 
 Note: `python run.py` defaults `UVICORN_RELOAD` to `false` to keep OTP state stable on Windows. To enable auto-reload: `$env:UVICORN_RELOAD="true"`.
 
+Logging note: by default the backend runs with quieter logs (to avoid noisy request + WebSocket connect spam during demos). You can re-enable them:
+- `$env:UVICORN_LOG_LEVEL="info"`
+- `$env:UVICORN_ACCESS_LOG="true"`
+
 Backend runs on: `http://localhost:8000`
 
 By default the backend points `DATABASE_URL` at `sqlite:///./local.db` (with `SQLITE_DB_PATH=local.db`), so you can run without a Postgres server and still take advantage of SQLite's file-based storage. If you see repeated `ECONNREFUSED` or `WinError 10013` messages, verify port `8000` is free before relaunching the server (the troubleshooting section below walks through `netstat` and `Stop-Process`).
@@ -112,6 +116,8 @@ npm run dev
 Frontend runs on default Vite port (usually `http://localhost:5173`).
 Frontend uses Vite proxy to call backend (`/api` and `/ws` -> `http://localhost:8000` by default).
 
+Windows PowerShell note: if you see `npm` blocked by execution policy, run `npm.cmd run dev` instead.
+
 ## Helper Functions
 
 - FastAPI dependencies like `SendOTPRequest`, `LoginRequest`, and `VerifyOTPRequest` are declared before their routers and wired directly into each signature, so FastAPI never sees `ForwardRef` objects while `_build_otp_response` continues to centralize OTP delivery, duplicate detection, and optional dev output.
@@ -131,8 +137,13 @@ Frontend uses Vite proxy to call backend (`/api` and `/ws` -> `http://localhost:
 - `DATABASE_URL` (defaults to `sqlite:///./local.db` locally; override with a Postgres URL for production)
 - `SQLITE_DB_PATH` (default: `local.db`)
 - `BLOCKCHAIN_SALT` (hash salt for ledger signatures)
+- `ALLOWED_ORIGINS` / `CORS_ORIGINS` (comma-separated list; defaults to `http://localhost:5173,http://127.0.0.1:5173`)
 - `ANTHROPIC_API_KEY` (for Claude-powered AI integrations; leave blank to keep the baseline forecasts and summaries)
 - `ANTHROPIC_MODEL` (optional override; default: `claude-opus-4-6`)
+- `UVICORN_HOST` (default: `127.0.0.1`)
+- `UVICORN_PORT` (default: `8000`)
+- `UVICORN_LOG_LEVEL` (default: `warning`)
+- `UVICORN_ACCESS_LOG` (default: `false`)
 
 Providing the `ANTHROPIC_API_KEY` enables the backend AI helpers to call Claude; when the key is missing they gracefully return the mean-based baselines defined in `app/services/ai_service.py`.
 - `MOCK_EMAIL_DELIVERY` (default in this repo: `false`). When `true`, emails are printed to the console instead of sending. When `false`, thank-you emails and OTP emails send via SMTP; failures are logged and `/api/auth/feedback` returns `email_sent: false` + `email_error` instead of failing the request.
@@ -155,6 +166,7 @@ If you still see `EMAIL MOCK` in the backend logs while `MOCK_EMAIL_DELIVERY=fal
 - `VITE_API_BASE_URL` (default: `/api`)
 - `VITE_GPS_SOCKET_URL` (default: browser host + `/ws/gps`)
 - `VITE_DEV_PROXY_TARGET` (default in Vite config: `http://localhost:8000`)
+- `VITE_NOTIFICATION_SOCKET_PING_MS` (default: `20000`) keepalive ping for `/ws/notifications/*`
 
 ### Secrets and `.env`
 
@@ -163,6 +175,7 @@ If you still see `EMAIL MOCK` in the backend logs while `MOCK_EMAIL_DELIVERY=fal
 - Use `.env.example` files for safe placeholders only.
 - `.env.example` files in this repo use placeholders (never real keys). Set real values in your shell or local `backend/.env` copy so secrets never land in source control.
 - The backend loads both `./.env` and `backend/.env`; if the same key appears in both files, `backend/.env` wins (shell environment variables still win over both).
+- If any credential is ever committed to git history, rotate/revoke it immediately and replace it in your local `backend/.env` (never commit real keys).
 
 ### Render PostgreSQL Setup
 
@@ -172,7 +185,7 @@ If you still see `EMAIL MOCK` in the backend logs while `MOCK_EMAIL_DELIVERY=fal
 4. Keep `SQLITE_DB_PATH` only as local fallback.
 5. Restart the backend service. On startup, tables are auto-created via SQLAlchemy.
 
-For local development the repo already points `DATABASE_URL` at `sqlite:///./local.db` in `backend/.env`, so you can skip the Postgres setup unless you explicitly need the hosted database.
+For local development you can skip Postgres entirely: leave `DATABASE_URL` unset and the backend uses SQLite via `SQLITE_DB_PATH=local.db` (or copy `backend/.env.example` to `backend/.env`).
 
 OTP note: the backend does **not** include the OTP in the `/api/auth/send-otp` response by default. If SMTP delivery fails, it returns `503` so you fix SMTP and the OTP actually reaches the inbox. For local testing only, you can set `EXPOSE_OTP_IN_RESPONSE=true` to include `otp` in the response payload.
 ## Full Stack Run Order
@@ -313,6 +326,7 @@ Dashboard pages and the API functions they use:
 
 ## Notes
 
-- CORS is open for local development.
+- CORS is restricted by default to local Vite origins; set `ALLOWED_ORIGINS`/`CORS_ORIGINS` for deployments (and never use `*` in production).
 - In development, OTP value may be returned in API response for easier testing.
 - Frontend API layer includes fallbacks for guest mode and unavailable endpoints.
+- WebSocket connections are used for live GPS + notifications even if the UI doesn’t show a “WebSocket live” label.
