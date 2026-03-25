@@ -1,0 +1,45 @@
+{
+  "title": "Choose Your Role",
+  "subtitle": "Select your role to access the appropriate dashboard and features",
+  "roles": [
+    {
+      "id": "Admin",
+      "letter": "A",
+      "title": "Admin",
+      "description": "Full system control and oversight"
+    },
+    {
+      "id": "Manufacturer",
+      "letter": "M",
+      "title": "Manufacturer",
+      "description": "Production and batch management"
+    },
+    {
+      "id": "Transporter",
+      "letter": "T",
+      "title": "Transporter",
+      "description": "Fleet tracking and logistics"
+    },
+    {
+      "id": "Dealer",
+      "letter": "D",
+      "title": "Dealer",
+      "description": "Distribution and wholesale"
+    },
+    {
+      "id": "RetailShop",
+      "letter": "R",
+      "title": "Retail Shop",
+      "description": "POS and inventory management"
+    }
+  ],
+  "cssKeyByRole": {
+    "admin": "admin",
+    "manufacturer": "supplier",
+    "transporter": "logistics",
+    "dealer": "retailer",
+    "retailshop": "analyst"
+  },
+  "backLabel": "Back to Homepage"
+}
+

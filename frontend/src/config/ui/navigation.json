@@ -1,0 +1,53 @@
+{
+  "ROLE_LINKS": {
+    "Admin": ["Dashboard", "Analytics", "Blockchain Monitor", "Reports"],
+    "Manufacturer": ["Dashboard", "Production", "AI Forecast", "Ledger Feed", "Inventory"],
+    "Transporter": ["Dashboard", "Live Map", "AI Routes", "Fleet Alerts", "Shipments"],
+    "Dealer": ["Dashboard", "Analytics", "Orders", "Inventory", "Arrivals"],
+    "RetailShop": ["Dashboard", "Scanner", "Verification", "Sales", "POS"]
+  },
+  "PATH_BY_ROLE_LINK": {
+    "Admin": {
+      "Dashboard": "/prismpage/adminDashboard",
+      "Analytics": "/prismpage/adminAnalytics",
+      "Blockchain Monitor": "/prismpage/adminBlockchain",
+      "Reports": "/prismpage/adminReports"
+    },
+    "Manufacturer": {
+      "Dashboard": "/prismpage/manufacturerOverview",
+      "Production": "/prismpage/manufacturerProduction",
+      "AI Forecast": "/prismpage/manufacturerAnalytics",
+      "Ledger Feed": "/prismpage/manufacturerBlockchain",
+      "Inventory": "/prismpage/manufacturerInventory"
+    },
+    "Transporter": {
+      "Dashboard": "/prismpage/transporterOverview",
+      "Live Map": "/prismpage/transporterMap",
+      "AI Routes": "/prismpage/transporterAnalytics",
+      "Fleet Alerts": "/prismpage/transporterFleet",
+      "Shipments": "/prismpage/transporterShipments"
+    },
+    "Dealer": {
+      "Dashboard": "/prismpage/dealerDashboard",
+      "Analytics": "/prismpage/dealerAnalytics",
+      "Orders": "/prismpage/dealerOrders",
+      "Inventory": "/prismpage/dealerInventory",
+      "Arrivals": "/prismpage/dealerArrivals"
+    },
+    "RetailShop": {
+      "Dashboard": "/prismpage/retailOverview",
+      "Scanner": "/prismpage/retailScanner",
+      "Verification": "/prismpage/retailInventory",
+      "Sales": "/prismpage/retailSales",
+      "POS": "/prismpage/retailPos"
+    }
+  },
+  "SOCKET_USER_BY_ROLE": {
+    "Admin": "admin",
+    "Manufacturer": "manufacturer",
+    "Transporter": "transporter",
+    "Dealer": "dealer",
+    "RetailShop": "retail_shop"
+  }
+}
+

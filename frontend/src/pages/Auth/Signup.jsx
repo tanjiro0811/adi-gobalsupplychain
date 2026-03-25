@@ -191,10 +191,10 @@ function Signup({ role, onSubmit, onBack, onLoginClick }) {
   return (
     <main className="auth-scene auth-signup-theme">
       <form onSubmit={handleSubmit} className="auth-panel auth-signup-panel">
-        <h2 className="auth-panel-title">
+        <h1 className="auth-panel-title">
           Signup
           <span className="signup-role-label">({role})</span>
-        </h2>
+        </h1>
         <p className="auth-panel-subtitle">Create your account to continue.</p>
 
         <div className="auth-field-group">
@@ -308,6 +308,14 @@ function Signup({ role, onSubmit, onBack, onLoginClick }) {
           <button type="submit" disabled={isLoading} className="auth-btn-primary">
             {isLoading ? 'Sending verification code...' : 'Continue'}
           </button>
+          <button
+            type="button"
+            onClick={onLoginClick || onBack}
+            disabled={isLoading}
+            className="auth-btn-ghost auth-btn-login"
+          >
+            Log in
+          </button>
           <button type="button" onClick={onBack} disabled={isLoading} className="auth-btn-ghost">
             Back
           </button>
@@ -380,6 +388,21 @@ function Signup({ role, onSubmit, onBack, onLoginClick }) {
 
             <p className="otp-help-text">
               Did not receive the code? Check spam or click resend.
+            </p>
+
+            <p className="otp-switch-row">
+              Already have an account?{' '}
+              <button
+                type="button"
+                className="otp-switch-link"
+                onClick={() => {
+                  handleCloseOtpModal()
+                  ;(onLoginClick || onBack)?.()
+                }}
+                disabled={isVerifyingOtp}
+              >
+                Log in
+              </button>
             </p>
           </div>
         </div>

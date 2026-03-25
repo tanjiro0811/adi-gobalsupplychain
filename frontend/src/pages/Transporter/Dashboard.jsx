@@ -152,17 +152,15 @@ function TransporterDashboard({
       setPingingShipmentId(shipment.id)
       setPingMessage('')
       try {
-        const latShift = ((Math.random() * 2) - 1) * 0.02
-        const lngShift = ((Math.random() * 2) - 1) * 0.02
-        const nextLat = Number((shipment.lat + latShift).toFixed(5))
-        const nextLng = Number((shipment.lng + lngShift).toFixed(5))
+        const nextLat = Number(Number(shipment.lat).toFixed(5))
+        const nextLng = Number(Number(shipment.lng).toFixed(5))
 
         await trackingApi.updateShipmentLocation(shipment.id, {
           lat: nextLat,
           lng: nextLng,
           status: 'in_transit',
         })
-        setPingMessage(`GPS ping sent for ${shipment.id} (${nextLat}, ${nextLng}).`)
+        setPingMessage(`GPS ping sent for ${shipment.id}.`)
       } catch (error) {
         setPingMessage(error?.message || 'Failed to send GPS ping.')
       } finally {

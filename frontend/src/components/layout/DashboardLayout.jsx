@@ -34,8 +34,9 @@ function normalizeNotification(value) {
   if (!id && !title && !message) {
     return null
   }
+  const fallbackId = `local-${Date.now()}-${String(title || message || 'alert').slice(0, 24)}`
   return {
-    id: id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    id: id || fallbackId,
     title: title || 'Alert',
     message: message || '',
     severity: String(value.severity ?? 'info').toLowerCase(),
@@ -109,7 +110,7 @@ function getLinkForPath(role, path) {
   }
 
   const normalizedPath = String(path).toLowerCase()
-  const match = Object.entries(linkMap).find(([, value]) => value === normalizedPath)
+  const match = Object.entries(linkMap).find(([, value]) => String(value).toLowerCase() === normalizedPath)
   return match?.[0] ?? 'Dashboard'
 }
 
@@ -180,11 +181,13 @@ function DashboardLayout({
   }, [role])
 
   const handleNavigate = (link) => {
-    setActiveLink(link)
     const path = PATH_BY_ROLE_LINK[role]?.[link]
     if (path && onNavigate) {
+      setActiveLink(link)
       onNavigate(path)
+      return
     }
+    setActiveLink(link)
   }
 
   const roleClass = role ? `role-${String(role).toLowerCase()}` : ''

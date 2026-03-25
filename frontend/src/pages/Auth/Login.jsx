@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './auth.css'
 
 function Login({ role, onSubmit, onBack, onSignupClick, onGuestClick }) {
@@ -7,6 +7,33 @@ function Login({ role, onSubmit, onBack, onSignupClick, onGuestClick }) {
   const [showPass,  setShowPass] = useState(false)
   const [error,     setError]    = useState('')
   const [isLoading, setIsLoading]= useState(false)
+  const emailInputRef = useRef(null)
+  const passwordInputRef = useRef(null)
+
+  useEffect(() => {
+    setEmail('')
+    setPassword('')
+    setError('')
+
+    const clearAutofill = () => {
+      if (document.activeElement !== emailInputRef.current && emailInputRef.current) {
+        emailInputRef.current.value = ''
+      }
+      if (document.activeElement !== passwordInputRef.current && passwordInputRef.current) {
+        passwordInputRef.current.value = ''
+      }
+      setEmail('')
+      setPassword('')
+    }
+
+    const frameId = window.requestAnimationFrame(clearAutofill)
+    const timerId = window.setTimeout(clearAutofill, 120)
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      window.clearTimeout(timerId)
+    }
+  }, [role])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -37,7 +64,7 @@ function Login({ role, onSubmit, onBack, onSignupClick, onGuestClick }) {
 
   return (
     <main className="auth-scene">
-      <form onSubmit={handleSubmit} className="auth-panel">
+      <form onSubmit={handleSubmit} className="auth-panel" autoComplete="off">
 
         {/* ── Role Badge ── */}
         <div style={{ textAlign: 'center', marginBottom: 8 }}>
@@ -70,11 +97,15 @@ function Login({ role, onSubmit, onBack, onSignupClick, onGuestClick }) {
             Email Address
           </label>
           <input
+            ref={emailInputRef}
             id="login-email"
             type="email"
+            name="login_identifier"
             required
             placeholder="you@example.com"
             className="auth-field-input"
+            autoComplete="off"
+            data-lpignore="true"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -87,11 +118,15 @@ function Login({ role, onSubmit, onBack, onSignupClick, onGuestClick }) {
           </label>
           <div className="auth-password-wrapper">
             <input
+              ref={passwordInputRef}
               id="login-password"
               type={showPass ? 'text' : 'password'}
+              name="login_secret"
               required
               placeholder="Enter your password"
               className="auth-field-input"
+              autoComplete="new-password"
+              data-lpignore="true"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />

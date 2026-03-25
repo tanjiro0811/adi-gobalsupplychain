@@ -32,16 +32,6 @@ const DEFAULT_SYSTEM_STATUS = [
 
 const LIVE_REFRESH_MS = 15000
 
-function generateMockRevenue() {
-  const days = 30
-  return Array.from({ length: days }, () => 50000 + Math.random() * 100000)
-}
-
-function generateMockForecast() {
-  const days = 60
-  return Array.from({ length: days }, () => 80000 + Math.random() * 120000)
-}
-
 function Analytics({ user, onLogout, onNavigate, currentPath }) {
   const [timeRange, setTimeRange] = useState('30d')
   const [loading, setLoading] = useState(true)
@@ -67,8 +57,8 @@ function Analytics({ user, onLogout, onNavigate, currentPath }) {
         }
 
         setAnalyticsData((prev) => ({
-          revenue: response.revenue || generateMockRevenue(),
-          forecast: response.forecast || generateMockForecast(),
+          revenue: Array.isArray(response.revenue) ? response.revenue : prev.revenue,
+          forecast: Array.isArray(response.forecast) ? response.forecast : prev.forecast,
           userDistribution: response.userDistribution || DEFAULT_USER_DISTRIBUTION,
           systemStatus: response.systemStatus || DEFAULT_SYSTEM_STATUS,
           apiMetrics: response.apiMetrics || prev.apiMetrics || DEFAULT_API_METRICS,
@@ -80,8 +70,8 @@ function Analytics({ user, onLogout, onNavigate, currentPath }) {
         }
 
         setAnalyticsData((prev) => ({
-          revenue: generateMockRevenue(),
-          forecast: generateMockForecast(),
+          revenue: prev.revenue,
+          forecast: prev.forecast,
           userDistribution: DEFAULT_USER_DISTRIBUTION,
           systemStatus: DEFAULT_SYSTEM_STATUS,
           apiMetrics: prev.apiMetrics || DEFAULT_API_METRICS,

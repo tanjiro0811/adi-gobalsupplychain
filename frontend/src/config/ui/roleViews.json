@@ -1,0 +1,73 @@
+{
+  "Admin": {
+    "kind": "multiComponent",
+    "defaultComponentKey": "AdminDashboard",
+    "pathToComponentKey": {
+      "/admin": "AdminDashboard",
+      "/admin/dashboard": "AdminDashboard",
+      "/admin/analytics": "AdminAnalytics",
+      "/admin/blockchain": "AdminBlockchainMonitor",
+      "/admin/blockchainmonitor": "AdminBlockchainMonitor",
+      "/admin/reports": "AdminSystemReport",
+      "/admin/systemreports": "AdminSystemReport"
+    }
+  },
+  "Manufacturer": {
+    "kind": "singleComponent",
+    "componentKey": "ManufacturerDashboard",
+    "defaultView": "overview",
+    "pathToView": {
+      "/manufacturer": "overview",
+      "/manufacturer/dashboard": "overview",
+      "/manufacturer/production": "production",
+      "/manufacturer/inventory": "inventory",
+      "/manufacturer/analytics": "analytics",
+      "/manufacturer/blockchain": "blockchain",
+      "/manufacturer/ledger": "blockchain"
+    }
+  },
+  "Transporter": {
+    "kind": "singleComponent",
+    "componentKey": "TransporterDashboard",
+    "defaultView": "overview",
+    "pathToView": {
+      "/transporter": "overview",
+      "/transporter/dashboard": "overview",
+      "/transporter/map": "map",
+      "/transporter/analytics": "analytics",
+      "/transporter/ai-routes": "analytics",
+      "/transporter/fleet": "fleet",
+      "/transporter/shipments": "shipments",
+      "/transporter/shipment": "shipments"
+    }
+  },
+  "Dealer": {
+    "kind": "multiComponent",
+    "defaultComponentKey": "DealerDashboard",
+    "pathToComponentKey": {
+      "/dealer": "DealerDashboard",
+      "/dealer/dashboard": "DealerDashboard",
+      "/dealer/orders": "DealerOrders",
+      "/dealer/wholesale": "DealerOrders",
+      "/dealer/arrivals": "DealerArrivals",
+      "/dealer/inventory": "DealerInventory",
+      "/dealer/verification": "DealerInventory",
+      "/dealer/analytics": "DealerAnalytics"
+    }
+  },
+  "RetailShop": {
+    "kind": "singleComponent",
+    "componentKey": "RetailShopDashboard",
+    "defaultView": "overview",
+    "pathToView": {
+      "/retail": "overview",
+      "/retail/dashboard": "overview",
+      "/retail/scanner": "scanner",
+      "/retail/inventory": "inventory",
+      "/retail/verification": "inventory",
+      "/retail/sales": "sales",
+      "/retail/pos": "pos"
+    }
+  }
+}
+

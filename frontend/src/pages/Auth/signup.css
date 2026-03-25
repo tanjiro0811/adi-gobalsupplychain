@@ -773,6 +773,18 @@ main.auth-scene.auth-signup-theme {
   transform: translateY(-1px);
 }
 
+.auth-signup-panel .auth-btn-login {
+  border-color: var(--su-cyan-border);
+  color: var(--su-cyan-mid);
+}
+
+.auth-signup-panel .auth-btn-login:hover:not(:disabled) {
+  background: rgba(0, 240, 255, 0.04);
+  border-color: var(--su-cyan-border);
+  color: var(--su-cyan);
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.12);
+}
+
 .auth-signup-panel .auth-btn-ghost:active:not(:disabled) {
   transform: translateY(1px);
 }
@@ -1082,6 +1094,38 @@ main.auth-scene.auth-signup-theme {
   font-family: var(--su-font-body);
   position: relative;
   z-index: 1;
+}
+
+.otp-switch-row {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--su-text-mid);
+  position: relative;
+  z-index: 1;
+}
+
+.otp-switch-link {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--su-cyan);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  transition: color var(--su-t-snap), text-shadow var(--su-t-snap);
+}
+
+.otp-switch-link:hover:not(:disabled) {
+  color: #ffffff;
+  text-shadow: 0 0 16px rgba(0, 240, 255, 0.35);
+}
+
+.otp-switch-link:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* OTP error */

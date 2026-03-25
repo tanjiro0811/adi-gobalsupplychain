@@ -1,13 +1,12 @@
-import './roleselection.css'
-
+import DynamicUIProvider from '../../dynamic-ui/DynamicUIProvider'
+import DynamicPage from '../../dynamic-ui/DynamicPage'
+import { createWidgetRegistry } from '../../dynamic-ui/registry'
+import { registerBuiltInWidgets } from '../../dynamic-ui/widgets'
 import ROLE_SELECTION_CONFIG from '../../config/ui/roleSelection.json'
 
-function getRoleCssKey(roleId) {
-  const normalized = String(roleId || '').trim().toLowerCase()
-  return ROLE_SELECTION_CONFIG.cssKeyByRole?.[normalized] || normalized
-}
+import './roleselection.css'
 
-function RoleLogo({ roleId }) {
+function RoleLogoWidget({ roleId }) {
   const normalized = String(roleId || '').trim().toLowerCase()
   const shared = {
     className: 'role-card-logo-svg',
@@ -91,62 +90,48 @@ function RoleLogo({ roleId }) {
   return null
 }
 
-function RoleSelection({ selectedRole, onSelectRole, onSelect, onBack, includeAdmin = true }) {
-  const handleSelect = onSelectRole || onSelect
-  const roles = Array.isArray(ROLE_SELECTION_CONFIG.roles) ? ROLE_SELECTION_CONFIG.roles : []
-  const visibleRoles = includeAdmin ? roles : roles.filter((role) => role.id !== 'Admin')
+const ROLE_SELECTION_REGISTRY = (() => {
+  const registry = createWidgetRegistry()
+  registerBuiltInWidgets(registry)
+  registry.register('RoleLogo', RoleLogoWidget)
+  return registry
+})()
 
-  return (
-    <main className="role-selection-scene role-selection-theme-matrix">
-      <div className="role-selection-background">
-        <div className="gradient-orb orb-1"></div>
-        <div className="gradient-orb orb-2"></div>
-        <div className="gradient-orb orb-3"></div>
-      </div>
-
-      <section className="role-selection-container">
-        <div className="role-selection-header">
-          <h1 className="role-selection-title">{ROLE_SELECTION_CONFIG.title || 'Choose Your Role'}</h1>
-          <p className="role-selection-subtitle">
-            {ROLE_SELECTION_CONFIG.subtitle || 'Select your role to access the appropriate dashboard and features'}
-          </p>
-        </div>
-
-        <div className="role-grid">
-          {visibleRoles.map((role) => {
-            const active = role.id === selectedRole
-            return (
-              <button
-                key={role.id}
-                type="button"
-                onClick={() => handleSelect?.(role.id)}
-                className={`role-card ${active ? 'active' : ''}`}
-                data-role={getRoleCssKey(role.id)}
-                aria-pressed={active}
-              >
-                <div className="role-card-icon" aria-hidden="true">
-                  <span className="role-card-letter">{role.letter}</span>
-                  <span className="role-card-logo">
-                    <RoleLogo roleId={role.id} />
-                  </span>
-                </div>
-                <h3 className="role-card-title">{role.title}</h3>
-                <p className="role-card-description">{role.description}</p>
-                <div className="role-card-arrow">{'>'}</div>
-              </button>
-            )
-          })}
-        </div>
-
-        <div className="role-selection-actions">
-          <button type="button" onClick={onBack} className="btn-back">
-            {ROLE_SELECTION_CONFIG.backLabel || 'Back to Homepage'}
-          </button>
-        </div>
-
-      </section>
-    </main>
-  )
+function toCssKey(roleId) {
+  const normalized = String(roleId || '').trim().toLowerCase()
+  return ROLE_SELECTION_CONFIG.cssKeyByRole?.[normalized] || normalized
 }
 
-export default RoleSelection
+export default function RoleSelectionDynamic({
+  selectedRole,
+  onSelectRole,
+  onSelect,
+  onBack,
+  includeAdmin = true,
+}) {
+  const handleSelect = onSelectRole || onSelect
+  const roles = Array.isArray(ROLE_SELECTION_CONFIG.roles) ? ROLE_SELECTION_CONFIG.roles : []
+  const visibleRoles = (includeAdmin ? roles : roles.filter((role) => role.id !== 'Admin')).map((role) => ({
+    ...role,
+    cssKey: toCssKey(role.id),
+  }))
+
+  const actions = {
+    selectRole: (roleId) => handleSelect?.(roleId),
+    back: () => onBack?.(),
+  }
+
+  const data = {
+    title: ROLE_SELECTION_CONFIG.title || 'Choose Your Role',
+    subtitle: ROLE_SELECTION_CONFIG.subtitle || '',
+    backLabel: ROLE_SELECTION_CONFIG.backLabel || 'Back to Homepage',
+    roles: visibleRoles,
+    selectedRole,
+  }
+
+  return (
+    <DynamicUIProvider registry={ROLE_SELECTION_REGISTRY} data={data} actions={actions}>
+      <DynamicPage src="/dynamic-pages/roleSelection.json" fallback={null} />
+    </DynamicUIProvider>
+  )
+}

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { authApi } from './api/axiosInstance'
 import {
   useAuthStore,
@@ -12,22 +12,10 @@ import Homepage from './pages/Landing/Homepage'
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 import GuestForm from './pages/Auth/GuestForm'
-import RoleSelection from './pages/Auth/RoleSelection'
+import RoleSelection from './pages/Auth/RoleSelectionDynamic'
 import FeedbackForm from './pages/Feedback/Feedbackform'
+import PrismPage from './pages/PrismPage'
 import { DEFAULT_PATH_BY_ROLE } from './components/layout/navConfig'
-
-const AdminDashboard = lazy(() => import('./pages/Admin/Dashboard'))
-const AdminAnalytics = lazy(() => import('./pages/Admin/Analytics'))
-const AdminBlockchainMonitor = lazy(() => import('./pages/Admin/BlockchainMonitor'))
-const AdminSystemReport = lazy(() => import('./pages/Admin/Systemreport'))
-const ManufacturerDashboard = lazy(() => import('./pages/Manufacturer/Dashboard'))
-const TransporterDashboard = lazy(() => import('./pages/Transporter/Dashboard'))
-const DealerDashboard = lazy(() => import('./pages/Dealer/Dashboard'))
-const DealerOrders = lazy(() => import('./pages/Dealer/Orders'))
-const DealerArrivals = lazy(() => import('./pages/Dealer/Arrivals'))
-const DealerInventory = lazy(() => import('./pages/Dealer/Inventory'))
-const DealerAnalytics = lazy(() => import('./pages/Dealer/Analytics'))
-const RetailShopDashboard = lazy(() => import('./pages/RetailShop/Dashboard'))
 
 const ROLE_TO_API = {
   Admin: 'admin',
@@ -37,86 +25,80 @@ const ROLE_TO_API = {
   RetailShop: 'retail_shop',
 }
 
-function getRoleView(role, pathname) {
-  const normalizedPath = String(pathname || '').toLowerCase()
+const PRISM_PATH_PREFIX = '/prismpage/'
 
-  if (role === 'Admin') {
-    const map = {
-      '/admin': AdminDashboard,
-      '/admin/dashboard': AdminDashboard,
-      '/admin/analytics': AdminAnalytics,
-      '/admin/blockchain': AdminBlockchainMonitor,
-      '/admin/blockchainmonitor': AdminBlockchainMonitor,
-      '/admin/reports': AdminSystemReport,
-      '/admin/systemreports': AdminSystemReport,
-    }
-    return { Component: map[normalizedPath] ?? AdminDashboard, viewProps: {} }
+const LEGACY_PATH_TO_PAGE_ID = Object.freeze({
+  '/admin': 'adminDashboard',
+  '/admin/dashboard': 'adminDashboard',
+  '/admin/analytics': 'adminAnalytics',
+  '/admin/blockchain': 'adminBlockchain',
+  '/admin/blockchainmonitor': 'adminBlockchain',
+  '/admin/reports': 'adminReports',
+  '/admin/systemreports': 'adminReports',
+
+  '/manufacturer': 'manufacturerOverview',
+  '/manufacturer/dashboard': 'manufacturerOverview',
+  '/manufacturer/production': 'manufacturerProduction',
+  '/manufacturer/inventory': 'manufacturerInventory',
+  '/manufacturer/analytics': 'manufacturerAnalytics',
+  '/manufacturer/blockchain': 'manufacturerBlockchain',
+  '/manufacturer/ledger': 'manufacturerBlockchain',
+
+  '/transporter': 'transporterOverview',
+  '/transporter/dashboard': 'transporterOverview',
+  '/transporter/map': 'transporterMap',
+  '/transporter/analytics': 'transporterAnalytics',
+  '/transporter/ai-routes': 'transporterAnalytics',
+  '/transporter/fleet': 'transporterFleet',
+  '/transporter/shipments': 'transporterShipments',
+  '/transporter/shipment': 'transporterShipments',
+
+  '/dealer': 'dealerDashboard',
+  '/dealer/dashboard': 'dealerDashboard',
+  '/dealer/analytics': 'dealerAnalytics',
+  '/dealer/orders': 'dealerOrders',
+  '/dealer/wholesale': 'dealerOrders',
+  '/dealer/arrivals': 'dealerArrivals',
+  '/dealer/inventory': 'dealerInventory',
+  '/dealer/verification': 'dealerInventory',
+
+  '/retail': 'retailOverview',
+  '/retail/dashboard': 'retailOverview',
+  '/retail/scanner': 'retailScanner',
+  '/retail/inventory': 'retailInventory',
+  '/retail/verification': 'retailInventory',
+  '/retail/sales': 'retailSales',
+  '/retail/pos': 'retailPos',
+})
+
+function normalizePath(pathname) {
+  const normalized = String(pathname || '/').trim().toLowerCase()
+  if (!normalized.startsWith('/')) return `/${normalized}`
+  return normalized
+}
+
+function toPrismPath(pageId) {
+  const normalized = String(pageId || '').trim()
+  if (!normalized) return ''
+  return `${PRISM_PATH_PREFIX}${encodeURIComponent(normalized)}`
+}
+
+function mapPathToPrism(pathname) {
+  const raw = String(pathname || '/')
+  if (raw.toLowerCase().startsWith(PRISM_PATH_PREFIX)) {
+    return raw
   }
+  const pageId = LEGACY_PATH_TO_PAGE_ID[normalizePath(raw)]
+  return pageId ? toPrismPath(pageId) : raw
+}
 
-  if (role === 'Manufacturer') {
-    const viewByPath = {
-      '/manufacturer': 'overview',
-      '/manufacturer/dashboard': 'overview',
-      '/manufacturer/production': 'production',
-      '/manufacturer/inventory': 'inventory',
-      '/manufacturer/analytics': 'analytics',
-      '/manufacturer/blockchain': 'blockchain',
-      '/manufacturer/ledger': 'blockchain',
-    }
-    return {
-      Component: ManufacturerDashboard,
-      viewProps: { initialView: viewByPath[normalizedPath] ?? 'overview' },
-    }
-  }
-
-  if (role === 'Transporter') {
-    const viewByPath = {
-      '/transporter': 'overview',
-      '/transporter/dashboard': 'overview',
-      '/transporter/map': 'map',
-      '/transporter/analytics': 'analytics',
-      '/transporter/ai-routes': 'analytics',
-      '/transporter/fleet': 'fleet',
-      '/transporter/shipments': 'shipments',
-      '/transporter/shipment': 'shipments',
-    }
-    return {
-      Component: TransporterDashboard,
-      viewProps: { initialView: viewByPath[normalizedPath] ?? 'overview' },
-    }
-  }
-
-  if (role === 'Dealer') {
-    const map = {
-      '/dealer': DealerDashboard,
-      '/dealer/dashboard': DealerDashboard,
-      '/dealer/orders': DealerOrders,
-      '/dealer/wholesale': DealerOrders,
-      '/dealer/arrivals': DealerArrivals,
-      '/dealer/inventory': DealerInventory,
-      '/dealer/verification': DealerInventory,
-      '/dealer/analytics': DealerAnalytics,
-    }
-    return { Component: map[normalizedPath] ?? DealerDashboard, viewProps: {} }
-  }
-
-  if (role === 'RetailShop') {
-    const viewByPath = {
-      '/retail': 'overview',
-      '/retail/dashboard': 'overview',
-      '/retail/scanner': 'scanner',
-      '/retail/inventory': 'inventory',
-      '/retail/verification': 'inventory',
-      '/retail/sales': 'sales',
-      '/retail/pos': 'pos',
-    }
-    return {
-      Component: RetailShopDashboard,
-      viewProps: { initialView: viewByPath[normalizedPath] ?? 'overview' },
-    }
-  }
-
-  return { Component: null, viewProps: {} }
+function parsePrismPageId(pathname) {
+  const raw = String(pathname || '')
+  const lower = raw.toLowerCase()
+  if (!lower.startsWith(PRISM_PATH_PREFIX)) return ''
+  const remainder = raw.slice(PRISM_PATH_PREFIX.length)
+  const pageId = remainder.split('/')[0]
+  return decodeURIComponent(pageId || '').trim()
 }
 
 function normalizeRole(role) {
@@ -137,7 +119,7 @@ function App() {
   const [entryIntent, setEntryIntent] = useState('login')
   const [logoutFeedbackPrefill, setLogoutFeedbackPrefill] = useState(null)
   const [currentPath, setCurrentPath] = useState(() =>
-    typeof window === 'undefined' ? '/' : window.location.pathname,
+    typeof window === 'undefined' ? '/' : mapPathToPrism(window.location.pathname),
   )
 
   useEffect(() => {
@@ -145,19 +127,28 @@ function App() {
       return
     }
 
-    const handlePopState = () => setCurrentPath(window.location.pathname)
+    const handlePopState = () => {
+      const mapped = mapPathToPrism(window.location.pathname)
+      if (mapped !== window.location.pathname) {
+        window.history.replaceState({}, '', mapped)
+      }
+      setCurrentPath(mapped)
+    }
     window.addEventListener('popstate', handlePopState)
     return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
-  const navigate = (path) => {
+  const navigate = (path, { replace = false } = {}) => {
     if (typeof window === 'undefined') {
       return
     }
-    if (window.location.pathname !== path) {
-      window.history.pushState({}, '', path)
+    const mapped = mapPathToPrism(path)
+    const current = window.location.pathname
+    if (current !== mapped) {
+      const fn = replace ? window.history.replaceState : window.history.pushState
+      fn.call(window.history, {}, '', mapped)
     }
-    setCurrentPath(path)
+    setCurrentPath(mapped)
   }
 
   const handleLogout = () => {
@@ -185,13 +176,23 @@ function App() {
     setScreen('role-selection')
   }
 
-  const { Component: Dashboard, viewProps } = useMemo(() => {
-    return getRoleView(auth.role, currentPath)
-  }, [auth.role, currentPath])
+  const prismPageId = useMemo(() => parsePrismPageId(currentPath), [currentPath])
 
-  const dashboardFallback = (
-    <main style={{ padding: 24, fontFamily: 'system-ui, sans-serif' }}>Loading dashboard...</main>
-  )
+  useEffect(() => {
+    if (!auth.role) return
+    if (!auth.user && !auth.isGuest) return
+
+    if (currentPath === '/' || !prismPageId) {
+      const fallback = DEFAULT_PATH_BY_ROLE[auth.role] ?? '/'
+      navigate(fallback, { replace: true })
+      return
+    }
+
+    const mapped = mapPathToPrism(currentPath)
+    if (mapped !== currentPath) {
+      navigate(mapped, { replace: true })
+    }
+  }, [auth.isGuest, auth.role, auth.user, currentPath, prismPageId])
 
   if (screen === 'feedback') {
     return (
@@ -206,32 +207,25 @@ function App() {
     )
   }
 
-  if (auth.isGuest && Dashboard) {
-    return (
-      <Suspense fallback={dashboardFallback}>
-        <Dashboard
+  if ((auth.user && auth.role) || (auth.isGuest && auth.role)) {
+    if (prismPageId) {
+      return (
+        <PrismPage
+          pageId={prismPageId}
           user={auth.user}
+          role={auth.role}
+          isGuest={auth.isGuest}
           onLogout={handleLogout}
-          isGuest={true}
           onNavigate={navigate}
           currentPath={currentPath}
-          {...viewProps}
         />
-      </Suspense>
-    )
-  }
+      )
+    }
 
-  if (Dashboard && auth.user && !auth.isGuest) {
     return (
-      <Suspense fallback={dashboardFallback}>
-        <Dashboard
-          user={auth.user}
-          onLogout={handleLogout}
-          onNavigate={navigate}
-          currentPath={currentPath}
-          {...viewProps}
-        />
-      </Suspense>
+      <main style={{ padding: 24, fontFamily: 'system-ui, sans-serif' }}>
+        Loading page...
+      </main>
     )
   }
 
@@ -250,7 +244,7 @@ function App() {
           })
 
           const normalizedRole = normalizeRole(data.role)
-          navigate(DEFAULT_PATH_BY_ROLE[normalizedRole] ?? '/')
+          navigate(DEFAULT_PATH_BY_ROLE[normalizedRole] ?? '/', { replace: true })
 
           setUserSession({
             user: { ...data.user, token: data.access_token },
@@ -279,7 +273,7 @@ function App() {
           })
 
           const normalizedRole = normalizeRole(data.role)
-          navigate(DEFAULT_PATH_BY_ROLE[normalizedRole] ?? '/')
+          navigate(DEFAULT_PATH_BY_ROLE[normalizedRole] ?? '/', { replace: true })
 
           setUserSession({
             user: { ...data.user, token: data.access_token },
@@ -311,7 +305,7 @@ function App() {
           }
 
           enterGuest(guestData.role, guestData.user?.name)
-          navigate(DEFAULT_PATH_BY_ROLE[guestData.role] ?? '/')
+          navigate(DEFAULT_PATH_BY_ROLE[guestData.role] ?? '/', { replace: true })
         }}
       />
     )
