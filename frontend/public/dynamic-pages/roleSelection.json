@@ -4,6 +4,22 @@
     "as": "main",
     "className": "role-selection-scene role-selection-theme-matrix"
   },
+  "events": {
+    "listeners": [
+      {
+        "event": "role.select",
+        "actions": {
+          "$action": "call",
+          "name": "selectRole",
+          "args": [{ "$ref": "event.payload" }]
+        }
+      },
+      {
+        "event": "nav.back",
+        "actions": { "$action": "call", "name": "back", "args": [] }
+      }
+    ]
+  },
   "children": [
     {
       "type": "Box",
@@ -51,11 +67,6 @@
                   "type": "Button",
                   "props": {
                     "type": "button",
-                    "onClick": {
-                      "$action": "call",
-                      "name": "selectRole",
-                      "args": [{ "$ref": "scope.role.id" }]
-                    },
                     "className": {
                       "$concat": [
                         "role-card ",
@@ -81,21 +92,41 @@
                       ]
                     }
                   },
+                  "events": {
+                    "emitters": {
+                      "click": {
+                        "event": "role.select",
+                        "payload": { "$ref": "scope.role.id" }
+                      }
+                    }
+                  },
                   "children": [
                     {
                       "type": "Box",
-                      "props": { "className": "role-card-icon", "aria-hidden": "true" },
+                      "props": {
+                        "className": "role-card-icon",
+                        "aria-hidden": "true"
+                      },
                       "children": [
                         {
                           "type": "Box",
-                          "props": { "as": "span", "className": "role-card-letter" },
+                          "props": {
+                            "as": "span",
+                            "className": "role-card-letter"
+                          },
                           "children": [{ "$ref": "scope.role.letter" }]
                         },
                         {
                           "type": "Box",
-                          "props": { "as": "span", "className": "role-card-logo" },
+                          "props": {
+                            "as": "span",
+                            "className": "role-card-logo"
+                          },
                           "children": [
-                            { "type": "RoleLogo", "props": { "roleId": { "$ref": "scope.role.id" } } }
+                            {
+                              "type": "RoleLogo",
+                              "props": { "roleId": { "$ref": "scope.role.id" } }
+                            }
                           ]
                         }
                       ]
@@ -131,8 +162,12 @@
               "type": "Button",
               "props": {
                 "type": "button",
-                "className": "btn-back",
-                "onClick": { "$action": "call", "name": "back", "args": [] }
+                "className": "btn-back"
+              },
+              "events": {
+                "emitters": {
+                  "click": { "event": "nav.back", "payload": null }
+                }
               },
               "children": [{ "$ref": "data.backLabel" }]
             }
@@ -142,4 +177,3 @@
     }
   ]
 }
-

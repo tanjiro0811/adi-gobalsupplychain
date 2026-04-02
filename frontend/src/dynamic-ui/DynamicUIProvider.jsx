@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { DynamicUIContext } from './DynamicUIContext'
 import { createEventBus } from './EventBus'
 
@@ -12,10 +12,7 @@ export default function DynamicUIProvider({
   children,
 }) {
   const [uiState, setUiState] = useState({})
-  const eventBusRef = useRef(null)
-  if (!eventBusRef.current) {
-    eventBusRef.current = createEventBus()
-  }
+  const [eventBus] = useState(() => createEventBus())
 
   const contextValue = useMemo(
     () => ({
@@ -25,12 +22,12 @@ export default function DynamicUIProvider({
       params,
       env,
       navigate,
-      eventBus: eventBusRef.current,
+      eventBus,
       uiState,
       setUiState,
       scope: {},
     }),
-    [actions, data, env, navigate, params, registry, uiState],
+    [actions, data, env, eventBus, navigate, params, registry, uiState],
   )
 
   return <DynamicUIContext.Provider value={contextValue}>{children}</DynamicUIContext.Provider>

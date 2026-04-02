@@ -59,12 +59,19 @@ def get_ai_forecast(
     if not values:
         sales = get_sales_history(days=90)
         values = [float(item.get("units_sold", 0)) for item in sales[-30:]]
-    if not values:
-        values = [120, 128, 134, 140, 155, 162]
+    clean = [value for value in values if value > 0]
+    if not clean:
+        return {
+            "input": [],
+            "horizon": horizon,
+            "forecast": [],
+            "message": "No sales history available for forecasting yet.",
+        }
+
     return {
-        "input": values,
+        "input": clean,
         "horizon": horizon,
-        "forecast": predict_demand(values, horizon=horizon),
+        "forecast": predict_demand(clean, horizon=horizon),
     }
 
 

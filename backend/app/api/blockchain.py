@@ -148,7 +148,15 @@ def product_qr(product_sku: str, request: Request) -> dict:
             border=4,
         )
         qr.add_data(data)
-        qr.make(fit=True)
+        try:
+            qr.make(fit=True)
+        except ValueError as exc:
+            # qrcode can raise ValueError("Invalid version (was 41, expected 1 to 40)")
+            # for payloads that don't fit. Treat as overflow so we can try smaller candidates.
+            message = str(exc)
+            if "expected 1 to 40" in message or message.lower().startswith("invalid version"):
+                raise DataOverflowError(message) from exc
+            raise
         img = qr.make_image(fill_color="black", back_color="white")
 
         buf = io.BytesIO()

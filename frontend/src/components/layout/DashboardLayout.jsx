@@ -46,8 +46,30 @@ function normalizeNotification(value) {
   }
 }
 
+function formatMetadataValue(value) {
+  if (value == null || value === '') {
+    return '—'
+  }
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value)
+  }
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
+}
+
 function AlertsDrawer({ open, items = [], onClose }) {
+  const [selectedItemId, setSelectedItemId] = useState('')
+
   if (!open) return null
+
+  const selectedItem =
+    items.find((item) => item.id === selectedItemId) ??
+    items[0] ??
+    null
+  const detailEntries = Object.entries(selectedItem?.metadata || {}).filter(([, value]) => value !== undefined)
 
   return (
     <div className="alerts-drawer-overlay" role="dialog" aria-modal="true" aria-label="Alerts">
@@ -76,7 +98,20 @@ function AlertsDrawer({ open, items = [], onClose }) {
           {!!items.length && (
             <div className="alerts-box card" style={{ margin: 0 }}>
               {items.map((item) => (
-                <div key={item.id} className="alerts-box-item">
+                <button
+                  key={item.id}
+                  type="button"
+                  className="alerts-box-item"
+                  onClick={() => setSelectedItemId(item.id)}
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    background: selectedItem?.id === item.id ? 'rgba(59, 130, 246, 0.08)' : 'transparent',
+                    border: selectedItem?.id === item.id ? '1px solid rgba(59, 130, 246, 0.28)' : '1px solid transparent',
+                    borderRadius: 12,
+                    cursor: 'pointer',
+                  }}
+                >
                   <div className="alerts-box-head">
                     <strong className="alerts-box-title">{item.title}</strong>
                     <span className={`alerts-chip alerts-chip--${item.severity || 'info'}`}>
@@ -85,8 +120,52 @@ function AlertsDrawer({ open, items = [], onClose }) {
                   </div>
                   {!!item.message && <div className="alerts-box-message">{item.message}</div>}
                   <div className="alerts-box-meta muted">{formatNotificationTimestamp(item.timestamp)}</div>
-                </div>
+                </button>
               ))}
+            </div>
+          )}
+
+          {!!selectedItem && (
+            <div className="card" style={{ marginTop: 16 }}>
+              <div className="alerts-box-head">
+                <strong className="alerts-box-title">What happened</strong>
+                <span className={`alerts-chip alerts-chip--${selectedItem.severity || 'info'}`}>
+                  {String(selectedItem.severity || 'info').toUpperCase()}
+                </span>
+              </div>
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>{selectedItem.title}</div>
+                <div className="alerts-box-message">
+                  {selectedItem.message || 'No extra message details were provided for this alert.'}
+                </div>
+                <div className="alerts-box-meta muted" style={{ marginTop: 8 }}>
+                  {formatNotificationTimestamp(selectedItem.timestamp)}
+                </div>
+              </div>
+
+              {!!detailEntries.length && (
+                <div style={{ marginTop: 14 }}>
+                  <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>Alert details</div>
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {detailEntries.map(([key, value]) => (
+                      <div
+                        key={key}
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'minmax(110px, 140px) 1fr',
+                          gap: 10,
+                          padding: '8px 10px',
+                          borderRadius: 10,
+                          background: 'rgba(148, 163, 184, 0.08)',
+                        }}
+                      >
+                        <strong style={{ textTransform: 'capitalize' }}>{key.replace(/_/g, ' ')}</strong>
+                        <span>{formatMetadataValue(value)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -148,7 +227,7 @@ function DashboardLayout({
   useEffect(() => {
     setAlertsOpen(false)
     setNotificationItems([])
-  }, [role])
+  }, [socketUserId])
 
   useEffect(() => {
     if (!socketUserId) {
@@ -178,7 +257,7 @@ function DashboardLayout({
     return () => {
       disconnectNotificationSocket()
     }
-  }, [role])
+  }, [socketUserId])
 
   const handleNavigate = (link) => {
     const path = PATH_BY_ROLE_LINK[role]?.[link]

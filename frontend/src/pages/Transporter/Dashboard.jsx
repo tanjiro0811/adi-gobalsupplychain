@@ -46,22 +46,18 @@ function TransporterDashboard({
   const [analyticsPayload, setAnalyticsPayload] = useState({})
   const [alerts, setAlerts] = useState([])
   const [isSocketConnected, setIsSocketConnected] = useState(false)
-  const [lastSocketUpdate, setLastSocketUpdate] = useState('')
   const [activeView, setActiveView] = useState(initialView)
   const [pingingShipmentId, setPingingShipmentId] = useState('')
   const [pingMessage, setPingMessage] = useState('')
 
   const applyTransportPayload = useCallback(
-    ({ shipments: nextShipments = {}, analytics = {}, alerts: nextAlerts = [], generatedAt = '' }) => {
+    ({ shipments: nextShipments = {}, analytics = {}, alerts: nextAlerts = [] }) => {
       setShipments(nextShipments)
       setAnalyticsPayload(normalizeAnalyticsPayload(analytics, nextShipments, '7d'))
       if (Array.isArray(nextAlerts) && nextAlerts.length) {
         setAlerts(nextAlerts)
       } else {
         setAlerts(buildTransportAlerts(nextShipments))
-      }
-      if (generatedAt) {
-        setLastSocketUpdate(generatedAt)
       }
     },
     [],
@@ -113,7 +109,6 @@ function TransporterDashboard({
             shipments: event.shipments ?? {},
             analytics: event.analytics ?? {},
             alerts: Array.isArray(event.alerts) ? event.alerts : [],
-            generatedAt: event.generatedAt ?? '',
           })
         }
       },

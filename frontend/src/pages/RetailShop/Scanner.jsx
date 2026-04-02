@@ -119,8 +119,8 @@ function Scanner({ products = [] }) {
   const [scannedCode, setScannedCode] = useState('')
   const [scanResult, setScanResult] = useState(null)
   const [isScanning, setIsScanning] = useState(false)
-  const [etaTargetTime, setEtaTargetTime] = useState(null)
-  const [etaLabel, setEtaLabel] = useState('Awaiting journey data for ETA countdown')
+  const [etaAnchorTime, setEtaAnchorTime] = useState(null)
+  const [etaClock, setEtaClock] = useState(() => Date.now())
 
   const productCatalog = normalizeScannerProducts(products)
   const productByCode = Object.fromEntries(
@@ -133,7 +133,7 @@ function Scanner({ products = [] }) {
     new Set(productCatalog.flatMap((item) => [item.code, ...(item.aliases || [])])),
   ).slice(0, 4)
 
-  const timelineSteps = useMemo(() => {
+  const timelineSteps = (() => {
     const journey = Array.isArray(scanResult?.journey) ? scanResult.journey : []
     return journey.map((step, index) => {
       const rawEta = step.etaHours ?? step.payload?.etaHours
@@ -147,39 +147,40 @@ function Scanner({ products = [] }) {
         txHash: step.txHash,
       }
     })
-  }, [scanResult?.journey])
+  })()
 
   const activeStageLabel =
     timelineSteps.length > 0 ? timelineSteps[timelineSteps.length - 1].stage : 'Waiting for blockchain sync'
 
-  useEffect(() => {
+  const etaTargetTime = useMemo(() => {
     const candidate = [...timelineSteps].reverse().find((step) => step.etaHours !== null && step.etaHours >= 0)
-    if (candidate && typeof candidate.etaHours === 'number') {
-      setEtaTargetTime(Date.now() + candidate.etaHours * 3600 * 1000)
-    } else {
-      setEtaTargetTime(null)
+    if (candidate && typeof candidate.etaHours === 'number' && etaAnchorTime) {
+      return etaAnchorTime + candidate.etaHours * 3600 * 1000
     }
-  }, [timelineSteps])
+    return null
+  }, [etaAnchorTime, timelineSteps])
 
   useEffect(() => {
     if (!etaTargetTime) {
-      setEtaLabel('Awaiting journey data for ETA countdown')
-      return
+      return undefined
     }
 
-    const update = () => {
-      const remaining = Math.max(etaTargetTime - Date.now(), 0)
-      if (remaining <= 0) {
-        setEtaLabel('Arrived • finalizing confirmation')
-        return
-      }
-      setEtaLabel(`${formatCountdownLabel(remaining)} until arrival`)
-    }
-
-    update()
-    const timer = setInterval(update, 1000)
+    const timer = setInterval(() => setEtaClock(Date.now()), 1000)
     return () => clearInterval(timer)
   }, [etaTargetTime])
+
+  const etaLabel = useMemo(() => {
+    if (!etaTargetTime) {
+      return 'Awaiting journey data for ETA countdown'
+    }
+
+    const remaining = Math.max(etaTargetTime - etaClock, 0)
+    if (remaining <= 0) {
+      return 'Arrived • finalizing confirmation'
+    }
+
+    return `${formatCountdownLabel(remaining)} until arrival`
+  }, [etaClock, etaTargetTime])
 
   const handleScan = (code) => {
     const normalizedCode = normalizeScanCode(extractSkuFromScan(code))
@@ -203,11 +204,13 @@ function Scanner({ products = [] }) {
       }
 
       if (!normalizedCode) {
+        setEtaAnchorTime(null)
         setScanResult({ error: true, message: 'Please scan a valid product code.' })
         setIsScanning(false)
         return
       }
 
+      setEtaAnchorTime(null)
       setScanResult({
         ...baseProduct,
         loadingBlockchain: true,
@@ -225,6 +228,9 @@ function Scanner({ products = [] }) {
       ])
         .then(([qrPayload, journeyPayload, summaryPayload]) => {
           const resolvedJourney = Array.isArray(journeyPayload?.journey) ? journeyPayload.journey : []
+          const resolvedAt = Date.now()
+          setEtaAnchorTime(resolvedAt)
+          setEtaClock(resolvedAt)
           setScanResult((prev) => ({
             ...(prev || baseProduct),
             loadingBlockchain: false,
@@ -238,6 +244,7 @@ function Scanner({ products = [] }) {
           }))
         })
         .catch(() => {
+          setEtaAnchorTime(null)
           setScanResult((prev) => ({
             ...(prev || baseProduct),
             loadingBlockchain: false,

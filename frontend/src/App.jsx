@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { authApi } from './api/axiosInstance'
 import {
   useAuthStore,
@@ -12,7 +12,7 @@ import Homepage from './pages/Landing/Homepage'
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 import GuestForm from './pages/Auth/GuestForm'
-import RoleSelection from './pages/Auth/RoleSelectionDynamic'
+import RoleSelection from './pages/Auth/RoleSelection'
 import FeedbackForm from './pages/Feedback/Feedbackform'
 import PrismPage from './pages/PrismPage'
 import { DEFAULT_PATH_BY_ROLE } from './components/layout/navConfig'
@@ -26,6 +26,7 @@ const ROLE_TO_API = {
 }
 
 const PRISM_PATH_PREFIX = '/prismpage/'
+const LOCATION_CHANGE_EVENT = 'app:locationchange'
 
 const LEGACY_PATH_TO_PAGE_ID = Object.freeze({
   '/admin': 'adminDashboard',
@@ -112,30 +113,59 @@ function normalizeRole(role) {
   return map[role] ?? role
 }
 
+function getCurrentPathSnapshot() {
+  if (typeof window === 'undefined') {
+    return '/'
+  }
+  return mapPathToPrism(window.location.pathname)
+}
+
+function notifyLocationChange() {
+  if (typeof window === 'undefined') {
+    return
+  }
+  window.dispatchEvent(new Event(LOCATION_CHANGE_EVENT))
+}
+
+function subscribeToLocationChanges(callback) {
+  if (typeof window === 'undefined') {
+    return () => {}
+  }
+
+  const handleChange = () => {
+    const mapped = mapPathToPrism(window.location.pathname)
+    if (mapped !== window.location.pathname) {
+      window.history.replaceState({}, '', mapped)
+    }
+    callback()
+  }
+
+  window.addEventListener('popstate', handleChange)
+  window.addEventListener(LOCATION_CHANGE_EVENT, handleChange)
+  return () => {
+    window.removeEventListener('popstate', handleChange)
+    window.removeEventListener(LOCATION_CHANGE_EVENT, handleChange)
+  }
+}
+
 function App() {
   const auth = useAuthStore(selectAuthState)
   const [screen, setScreen] = useState('home')
   const [pendingRole, setPendingRole] = useState('Admin')
   const [entryIntent, setEntryIntent] = useState('login')
   const [logoutFeedbackPrefill, setLogoutFeedbackPrefill] = useState(null)
-  const [currentPath, setCurrentPath] = useState(() =>
-    typeof window === 'undefined' ? '/' : mapPathToPrism(window.location.pathname),
-  )
+  const currentPath = useSyncExternalStore(subscribeToLocationChanges, getCurrentPathSnapshot, () => '/')
 
   useEffect(() => {
     if (typeof window === 'undefined') {
       return
     }
 
-    const handlePopState = () => {
-      const mapped = mapPathToPrism(window.location.pathname)
-      if (mapped !== window.location.pathname) {
-        window.history.replaceState({}, '', mapped)
-      }
-      setCurrentPath(mapped)
+    const mapped = mapPathToPrism(window.location.pathname)
+    if (mapped !== window.location.pathname) {
+      window.history.replaceState({}, '', mapped)
+      notifyLocationChange()
     }
-    window.addEventListener('popstate', handlePopState)
-    return () => window.removeEventListener('popstate', handlePopState)
   }, [])
 
   const navigate = (path, { replace = false } = {}) => {
@@ -147,8 +177,8 @@ function App() {
     if (current !== mapped) {
       const fn = replace ? window.history.replaceState : window.history.pushState
       fn.call(window.history, {}, '', mapped)
+      notifyLocationChange()
     }
-    setCurrentPath(mapped)
   }
 
   const handleLogout = () => {
@@ -259,7 +289,7 @@ function App() {
     return (
       <Signup
         role={pendingRole}
-        onBack={() => setScreen(entryIntent === 'signup' ? 'role-selection' : 'login')}
+        onBack={() => setScreen('role-selection')}
         onLoginClick={() => {
           setEntryIntent('login')
           setScreen('login')
@@ -300,7 +330,6 @@ function App() {
               role: apiRole,
             })
           } catch (error) {
-            // Do not block guest access if backend persistence is temporarily unavailable.
             console.warn('Guest form persistence failed:', error)
           }
 
@@ -322,13 +351,13 @@ function App() {
         }}
         onSelectRole={(role) => {
           setPendingRole(role)
-          if (entryIntent === 'guest') {
-            setScreen('guest')
+          if (entryIntent === 'signup') {
+            setScreen('signup')
             return
           }
 
-          if (entryIntent === 'signup') {
-            setScreen('signup')
+          if (entryIntent === 'guest') {
+            setScreen('guest')
             return
           }
 
