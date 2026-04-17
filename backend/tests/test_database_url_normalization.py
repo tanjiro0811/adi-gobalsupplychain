@@ -11,7 +11,7 @@ def test_normalize_database_url_adds_render_sslmode(monkeypatch) -> None:
     monkeypatch.setattr(database_service, "get_settings", lambda: settings)
 
     normalized = database_service._normalize_database_url()
-    assert normalized.startswith("postgresql+psycopg2://")
+    assert normalized.startswith("postgresql+psycopg://")
     assert "sslmode=require" in normalized
 
 

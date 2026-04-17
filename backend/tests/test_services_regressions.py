@@ -67,14 +67,14 @@ def test_engine_falls_back_to_sqlite_and_caches_result(monkeypatch) -> None:
 
     def fake_create_engine(url: str, **kwargs):
         calls.append(url)
-        if url == "postgresql+psycopg2://primary":
+        if url == "postgresql+psycopg://primary":
             raise SQLAlchemyError("primary unavailable")
         return fallback_engine
 
     monkeypatch.setattr(
         database_service,
         "_normalize_database_url",
-        lambda prefer_sqlite=False: "sqlite:///fallback.db" if prefer_sqlite else "postgresql+psycopg2://primary",
+        lambda prefer_sqlite=False: "sqlite:///fallback.db" if prefer_sqlite else "postgresql+psycopg://primary",
     )
     monkeypatch.setattr(database_service, "create_engine", fake_create_engine)
 
@@ -83,7 +83,7 @@ def test_engine_falls_back_to_sqlite_and_caches_result(monkeypatch) -> None:
 
     assert engine_one is fallback_engine
     assert engine_two is fallback_engine
-    assert calls == ["postgresql+psycopg2://primary", "sqlite:///fallback.db"]
+    assert calls == ["postgresql+psycopg://primary", "sqlite:///fallback.db"]
     assert database_service._current_database_url() == "sqlite:///fallback.db"
 
     database_service.reset_engine_for_tests()

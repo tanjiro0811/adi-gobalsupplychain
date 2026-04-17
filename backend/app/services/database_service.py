@@ -212,9 +212,9 @@ def _normalize_database_url(*, prefer_sqlite: bool = False) -> str:
     raw = str(settings.database_url or "").strip()
     if not prefer_sqlite and raw:
         if raw.startswith("postgres://"):
-            raw = raw.replace("postgres://", "postgresql+psycopg2://", 1)
+            raw = raw.replace("postgres://", "postgresql+psycopg://", 1)
         elif raw.startswith("postgresql://") and "+" not in raw.split("://", 1)[0]:
-            raw = raw.replace("postgresql://", "postgresql+psycopg2://", 1)
+            raw = raw.replace("postgresql://", "postgresql+psycopg://", 1)
         elif raw.startswith("postgresql://") or raw.startswith("postgresql+"):
             raw = raw
         else:
