@@ -42,6 +42,28 @@ function toSocketUrl(httpUrl) {
   return normalized
 }
 
+function getConfiguredSocketBase() {
+  const explicitBase =
+    import.meta.env.VITE_SOCKET_BASE_URL ||
+    import.meta.env.VITE_NOTIFICATION_SOCKET_BASE_URL ||
+    ''
+
+  if (String(explicitBase).trim()) {
+    return toSocketUrl(explicitBase).replace(/\/+$/, '')
+  }
+
+  if (import.meta.env.DEV) {
+    return getLocalBackendSocketBase()
+  }
+
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${protocol}//${window.location.host}`
+  }
+
+  return getLocalBackendSocketBase()
+}
+
 function getLocalBackendSocketUrl() {
   const backendTarget = import.meta.env.VITE_DEV_PROXY_TARGET || 'http://127.0.0.1:8000'
   const wsBase = toSocketUrl(backendTarget).replace(/\/+$/, '')
@@ -71,6 +93,11 @@ function getDefaultSocketUrl() {
 }
 
 function getDefaultSocketBase() {
+  const configuredBase = getConfiguredSocketBase()
+  if (configuredBase) {
+    return configuredBase
+  }
+
   if (typeof window === 'undefined') {
     return getLocalBackendSocketBase()
   }

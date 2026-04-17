@@ -182,6 +182,36 @@ If you still see `EMAIL MOCK` in the backend logs while `MOCK_EMAIL_DELIVERY=fal
 
 ### Render PostgreSQL Setup
 
+### Deploying Backend to Render
+
+Use these Render settings for the FastAPI backend:
+
+1. Create a new **Web Service** in Render.
+2. Connect this GitHub repository.
+3. Set **Root Directory** to `backend`.
+4. Set **Build Command** to:
+
+   ```text
+   pip install -r requirements.txt
+   ```
+
+5. Set **Start Command** to:
+
+   ```text
+   python run.py
+   ```
+
+6. Add the required environment variables in Render:
+   - `APP_ENV=production`
+   - `SECRET_KEY=<your-secret-key>`
+   - `DATABASE_URL=<Render Internal Database URL>`
+   - `ALLOWED_ORIGINS=<your frontend Render URL>`
+   - `MOCK_EMAIL_DELIVERY=false` if you want real OTP/feedback emails
+   - `SMTP_SERVER`, `SMTP_PORT`, `SENDER_EMAIL`, `SENDER_PASSWORD`, `SENDER_NAME` if SMTP is enabled
+   - `ANTHROPIC_API_KEY` or `GEMINI_API_KEY` if you want AI responses in production
+
+Render provides a `PORT` environment variable automatically. `backend/run.py` now respects that value, so `python run.py` works as the Render start command.
+
 1. Create a free PostgreSQL service in Render.
 2. Copy the correct database URL from Render:
    - **Backend running on Render**: use the **Internal Database URL**.
@@ -369,4 +399,47 @@ Dashboard pages and the API functions they use:
 - In development, OTP value may be returned in API response for easier testing.
 - Frontend API layer includes fallbacks for guest mode and unavailable endpoints.
 - WebSocket connections are used for live GPS + notifications even if the UI doesn’t show a “WebSocket live” label.
+
+## Bibliography
+
+The following references were used while designing, building, debugging, and deploying this project:
+
+1. Ethereum Official Documentation.  
+   Available at: `https://ethereum.org`
+2. Solidity Documentation.  
+   Available at: `https://docs.soliditylang.org`
+3. Web3.js Documentation.  
+   Available at: `https://web3js.readthedocs.io`
+4. React Official Documentation.  
+   Available at: `https://react.dev`
+5. FastAPI Official Documentation.  
+   Available at: `https://fastapi.tiangolo.com`
+6. SQLAlchemy Documentation.  
+   Available at: `https://docs.sqlalchemy.org`
+7. Vite Official Documentation.  
+   Available at: `https://vitejs.dev`
+8. MetaMask Official Website and Documentation.  
+   Available at: `https://metamask.io`
+9. Remix IDE for Smart Contract Development and Testing.  
+   Available at: `https://remix.ethereum.org`
+10. Ganache by Truffle Suite.  
+    Available at: `https://trufflesuite.com/ganache`
+11. Truffle for Ethereum dApps.  
+    Available at: `https://trufflesuite.com`
+12. Render Documentation and Deployment Platform.  
+    Available at: `https://render.com/docs`
+13. GitHub Repositories and Open Source Code References.  
+    Available at: `https://github.com`
+14. Stack Overflow for troubleshooting and solutions.  
+    Available at: `https://stackoverflow.com`
+15. Etherscan for verifying blockchain transactions.  
+    Available at: `https://etherscan.io`
+16. Infura for connecting to Ethereum networks.  
+    Available at: `https://infura.io`
+17. Research papers from IEEE Xplore Digital Library.  
+    Available at: `https://ieeexplore.ieee.org`
+18. Blockchain and web development learning resources from Coursera and Udemy.  
+    Available at: `https://www.coursera.org` and `https://www.udemy.com`
+19. YouTube tutorials on blockchain, React, FastAPI, and dApp development.  
+    Available at: `https://www.youtube.com`
  

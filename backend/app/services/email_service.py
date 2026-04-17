@@ -21,6 +21,14 @@ class EmailService:
         self.sender_name = settings.sender_name
         self.last_error_message = ""
 
+    @staticmethod
+    def _validate_email_address(value: str, *, label: str) -> str:
+        raw = str(value or "").strip()
+        _, parsed = parseaddr(raw)
+        if "@" not in parsed:
+            raise ValueError(f"Invalid {label} email address")
+        return parsed
+
     def send_email(
         self,
         to_email: str,
@@ -40,13 +48,12 @@ class EmailService:
                 return False
 
             recipient = str(to_email or "").strip()
-            _, parsed_recipient = parseaddr(recipient)
-            if "@" not in parsed_recipient:
-                raise ValueError("Invalid recipient email address")
+            parsed_recipient = self._validate_email_address(recipient, label="recipient")
+            parsed_sender = self._validate_email_address(self.sender_email, label="sender")
 
             message = MIMEMultipart("alternative")
             message["Subject"] = subject
-            message["From"] = f"{self.sender_name} <{self.sender_email}>"
+            message["From"] = f"{self.sender_name} <{parsed_sender}>"
             message["To"] = recipient
 
             if text_content:
@@ -64,8 +71,8 @@ class EmailService:
                     server.ehlo()
 
                 if self.sender_password:
-                    server.login(self.sender_email, self.sender_password)
-                server.sendmail(self.sender_email, [parsed_recipient], message.as_string())
+                    server.login(parsed_sender, self.sender_password)
+                server.sendmail(parsed_sender, [parsed_recipient], message.as_string())
 
             return True
         except smtplib.SMTPAuthenticationError as exc:  # pragma: no cover - operational logging path
@@ -379,6 +386,7 @@ class MockEmailService(EmailService):
         html_content: str,
         text_content: Optional[str] = None,
     ) -> bool:
+        self.last_error_message = ""
         print("\n" + "=" * 60)
         print("EMAIL MOCK")
         print("=" * 60)

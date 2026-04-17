@@ -167,6 +167,7 @@ except ConfigurationError as exc:
 
 
 if __name__ == "__main__":
+    import os
     import uvicorn
 
     def can_bind(host_value: str, port_value: int) -> tuple[bool, OSError | None]:
@@ -183,8 +184,9 @@ if __name__ == "__main__":
     # Enable explicitly with: $env:UVICORN_RELOAD="true"
     default_reload = "false"
     reload_enabled = os.getenv("UVICORN_RELOAD", default_reload).strip().lower() in {"1", "true", "yes", "on"}
-    host = os.getenv("UVICORN_HOST", "127.0.0.1")
-    port = int(os.getenv("UVICORN_PORT", "8000"))
+    render_port = (os.getenv("PORT") or "").strip()
+    host = "0.0.0.0"  # Ensure Render can access the service
+    port = int(os.getenv("UVICORN_PORT") or render_port or "8000")
 
     available, bind_error = can_bind(host, port)
     if not available:
@@ -205,10 +207,15 @@ if __name__ == "__main__":
     access_log_enabled = (os.getenv("UVICORN_ACCESS_LOG") or "false").strip().lower() in {"1", "true", "yes", "on"}
     print(f"[startup] API listening on http://{host}:{port} (log_level={log_level}, access_log={access_log_enabled})")
     uvicorn.run(
-        "run:app",
-        host=host,
+        "run:app",  # Updated to use the correct module and app instance
+        host="0.0.0.0",  # Bind to all interfaces
         port=port,
         reload=reload_enabled,
         log_level=log_level,
         access_log=access_log_enabled,
     )
+
+    # Gunicorn command for deployment
+    # gunicorn -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:$PORT
+
+
