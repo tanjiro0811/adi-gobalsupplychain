@@ -1,6 +1,7 @@
 import { getAuthState, logout } from '../store/useAuthStore'
 import { normalizeCurrencyString } from '../utils/currency'
 
+// FastAPI routes are mounted under /api, so production base URLs should keep that suffix.
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')
 const ENABLE_DEMO_FALLBACK = String(import.meta.env.VITE_ENABLE_DEMO_FALLBACK || '').toLowerCase() === 'true'
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1'])
@@ -44,6 +45,18 @@ function buildUrl(path, baseUrl = runtimeApiBaseUrl) {
   }
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
   return `${baseUrl}${normalizedPath}`
+}
+
+function shouldRetryWithLocalBackend(response, rawBody = '', contentType = '') {
+  if (!response || response.ok) {
+    return false
+  }
+
+  if ([502, 503, 504].includes(response.status)) {
+    return true
+  }
+
+  return response.status >= 500 && looksLikeProxyConnectionFailure(rawBody, contentType)
 }
 
 async function safeReadText(response) {
@@ -177,6 +190,7 @@ async function request(path, { method = 'GET', data, headers = {}, responseType 
   const fallbackBaseUrl = getLocalFallbackBaseUrl(path)
   const fallbackUrl = fallbackBaseUrl ? buildUrl(path, fallbackBaseUrl) : ''
   let response
+  let fallbackTried = false
   try {
     response = await fetch(requestUrl, {
       method,
@@ -189,6 +203,7 @@ async function request(path, { method = 'GET', data, headers = {}, responseType 
     }
     if (fallbackUrl) {
       try {
+        fallbackTried = true
         response = await fetch(fallbackUrl, {
           method,
           headers: requestHeaders,
@@ -221,9 +236,60 @@ async function request(path, { method = 'GET', data, headers = {}, responseType 
 
   if (!response.ok) {
     let message = DEFAULT_STATUS_MESSAGES[response.status] || `Request failed with status ${response.status}`
-    const rawBody = await safeReadText(response)
+    let rawBody = await safeReadText(response)
+    let contentType = response.headers.get('content-type') || ''
+
+    if (!fallbackTried && fallbackUrl && shouldRetryWithLocalBackend(response, rawBody, contentType)) {
+      try {
+        const fallbackResponse = await fetch(fallbackUrl, {
+          method,
+          headers: requestHeaders,
+          body: data !== undefined ? JSON.stringify(data) : undefined,
+        })
+        fallbackTried = true
+        if (fallbackResponse.ok) {
+          runtimeApiBaseUrl = fallbackBaseUrl
+          response = fallbackResponse
+          rawBody = await safeReadText(response)
+          contentType = response.headers.get('content-type') || ''
+        } else {
+          response = fallbackResponse
+          rawBody = await safeReadText(response)
+          contentType = response.headers.get('content-type') || ''
+          runtimeApiBaseUrl = fallbackBaseUrl
+        }
+      } catch (fallbackError) {
+        if (fallbackError?.name === 'AbortError') {
+          throw fallbackError
+        }
+      }
+    }
+
+    if (response.ok) {
+      if (responseType === 'blob') {
+        return response.blob()
+      }
+
+      if (responseType === 'text') {
+        return rawBody || safeReadText(response)
+      }
+
+      if (response.status === 204) {
+        return null
+      }
+
+      if (contentType.includes('application/json')) {
+        const payload = tryParseJson(rawBody)
+        if (payload !== null) {
+          return normalizeCurrencyPayload(payload)
+        }
+        return rawBody || null
+      }
+
+      return rawBody || safeReadText(response)
+    }
+
     if (rawBody) {
-      const contentType = response.headers.get('content-type') || ''
       if (response.status >= 500 && looksLikeProxyConnectionFailure(rawBody, contentType)) {
         const connectionHint = runtimeApiBaseUrl.startsWith('http')
           ? runtimeApiBaseUrl

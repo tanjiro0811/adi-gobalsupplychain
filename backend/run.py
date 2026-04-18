@@ -45,6 +45,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(settings.cors_origins),
+        allow_origin_regex=settings.cors_origin_regex or None,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -217,5 +218,4 @@ if __name__ == "__main__":
 
     # Gunicorn command for deployment
     # gunicorn -k uvicorn.workers.UvicornWorker main:app --bind 0.0.0.0:$PORT
-
 

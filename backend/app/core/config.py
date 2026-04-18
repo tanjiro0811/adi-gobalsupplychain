@@ -11,6 +11,7 @@ class Settings:
     app_name: str
     app_env: str
     cors_origins: tuple[str, ...]
+    cors_origin_regex: str
     secret_key: str
     jwt_algorithm: str
     access_token_expire_minutes: int
@@ -134,9 +135,13 @@ def get_settings() -> Settings:
 
     cors_raw = (os.getenv("ALLOWED_ORIGINS") or os.getenv("CORS_ORIGINS") or "").strip()
     cors_origins = tuple(origin.strip() for origin in cors_raw.split(",") if origin.strip())
+    cors_origin_regex = (os.getenv("ALLOWED_ORIGIN_REGEX") or os.getenv("CORS_ORIGIN_REGEX") or "").strip()
     if not cors_origins:
         cors_origins = ("http://localhost:5173", "http://127.0.0.1:5173")
-    elif app_env.strip().lower() not in {"prod", "production"}:
+
+    is_production = app_env.strip().lower() in {"prod", "production"}
+    render_external_url = (os.getenv("RENDER_EXTERNAL_URL") or "").strip()
+    if not is_production:
         local_dev_origins = (
             "http://localhost:5173",
             "http://127.0.0.1:5173",
@@ -148,11 +153,16 @@ def get_settings() -> Settings:
             if origin and origin not in merged_origins:
                 merged_origins.append(origin)
         cors_origins = tuple(merged_origins)
+        if render_external_url and not cors_origin_regex:
+            # Render preview/static-site hostnames vary, so allow Render-hosted frontends
+            # during non-production deployments unless an explicit regex is provided.
+            cors_origin_regex = r"https://.*\.onrender\.com"
 
     return Settings(
         app_name=os.getenv("APP_NAME", "Global Supply Chain API"),
         app_env=app_env,
         cors_origins=cors_origins,
+        cors_origin_regex=cors_origin_regex,
         secret_key=os.getenv("SECRET_KEY", "change-me-in-env"),
         jwt_algorithm=os.getenv("JWT_ALGORITHM", "HS256"),
         access_token_expire_minutes=_to_int("ACCESS_TOKEN_EXPIRE_MINUTES", "60"),
