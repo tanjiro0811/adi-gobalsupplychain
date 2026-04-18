@@ -292,7 +292,7 @@ def _engine() -> Engine:
         _ACTIVE_DATABASE_URL = primary_url
         _ENGINE = primary_engine
         return _ENGINE
-    except SQLAlchemyError as primary_exc:
+    except Exception as primary_exc:
         logger.warning("Primary database %s failed, falling back to SQLite: %s", primary_display, primary_exc)
         fallback_url = _normalize_database_url(prefer_sqlite=True)
         try:
@@ -306,7 +306,7 @@ def _engine() -> Engine:
             _ACTIVE_DATABASE_URL = fallback_url
             _ENGINE = fallback_engine
             return _ENGINE
-        except SQLAlchemyError as fallback_exc:
+        except Exception as fallback_exc:
             raise DatabaseError("Unable to initialize database engine") from fallback_exc
 
 

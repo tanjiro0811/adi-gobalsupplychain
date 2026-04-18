@@ -20,6 +20,11 @@ const MAX_RECONNECT_ATTEMPTS = Number(
 )
 
 const NOTIFICATION_PING_MS = Number(import.meta.env.VITE_NOTIFICATION_SOCKET_PING_MS ?? 20000)
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1'])
+
+function isLocalhostPage() {
+  return typeof window !== 'undefined' && LOCAL_HOSTS.has(window.location.hostname)
+}
 
 function toSocketUrl(httpUrl) {
   const normalized = String(httpUrl || '').trim()
@@ -49,7 +54,11 @@ function getConfiguredSocketBase() {
     ''
 
   if (String(explicitBase).trim()) {
-    return toSocketUrl(explicitBase).replace(/\/+$/, '')
+    const normalizedExplicitBase = toSocketUrl(explicitBase).replace(/\/+$/, '')
+    if (isLocalhostPage() && !import.meta.env.DEV) {
+      return getLocalBackendSocketBase()
+    }
+    return normalizedExplicitBase
   }
 
   if (import.meta.env.DEV) {
@@ -80,7 +89,7 @@ function getDefaultSocketUrl() {
     return getLocalBackendSocketUrl()
   }
 
-  if (import.meta.env.DEV) {
+  if (import.meta.env.DEV || isLocalhostPage()) {
     const host = window.location.hostname
     if (host === 'localhost' || host === '127.0.0.1') {
       // In local dev, connect directly to backend to avoid Vite WS proxy spam when backend is down.
@@ -102,7 +111,7 @@ function getDefaultSocketBase() {
     return getLocalBackendSocketBase()
   }
 
-  if (import.meta.env.DEV) {
+  if (import.meta.env.DEV || isLocalhostPage()) {
     const host = window.location.hostname
     if (host === 'localhost' || host === '127.0.0.1') {
       return getLocalBackendSocketBase()
@@ -195,7 +204,9 @@ function scheduleNotificationReconnect() {
 }
 
 export function connectGpsSocket({
-  url = import.meta.env.VITE_GPS_SOCKET_URL ?? getDefaultSocketUrl(),
+  url = (isLocalhostPage() && !import.meta.env.DEV)
+    ? getLocalBackendSocketUrl()
+    : (import.meta.env.VITE_GPS_SOCKET_URL ?? getDefaultSocketUrl()),
   onMessage,
   onOpen,
   onClose,

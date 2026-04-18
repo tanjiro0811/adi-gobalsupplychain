@@ -136,6 +136,18 @@ def get_settings() -> Settings:
     cors_origins = tuple(origin.strip() for origin in cors_raw.split(",") if origin.strip())
     if not cors_origins:
         cors_origins = ("http://localhost:5173", "http://127.0.0.1:5173")
+    elif app_env.strip().lower() not in {"prod", "production"}:
+        local_dev_origins = (
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:4173",
+            "http://127.0.0.1:4173",
+        )
+        merged_origins: list[str] = []
+        for origin in (*cors_origins, *local_dev_origins):
+            if origin and origin not in merged_origins:
+                merged_origins.append(origin)
+        cors_origins = tuple(merged_origins)
 
     return Settings(
         app_name=os.getenv("APP_NAME", "Global Supply Chain API"),
