@@ -64,7 +64,7 @@ By default the backend points `DATABASE_URL` at `sqlite:///./local.db` (with `SQ
 Useful endpoints:
 - Health: `GET /health`
 - OpenAPI docs: `GET /docs`
-- Health should return database info (`database: connected`) when DB is reachable, plus `email.mock` and `ai.claude_enabled` so you can confirm configuration.
+- Health should return database info (`database: connected`) when DB is reachable, plus `email.mock` and `ai.enabled`/`ai.provider` so you can confirm configuration.
 
 ### Backend Startup Troubleshooting (`WinError 10013`)
 
@@ -122,7 +122,7 @@ Windows PowerShell note: if you see `npm` blocked by execution policy, run `npm.
 
 - FastAPI dependencies like `SendOTPRequest`, `LoginRequest`, and `VerifyOTPRequest` are declared before their routers and wired directly into each signature, so FastAPI never sees `ForwardRef` objects while `_build_otp_response` continues to centralize OTP delivery, duplicate detection, and optional dev output.
 - `_build_otp_response(data)` remains the single gateway for `/auth/send-otp` and `/auth/resend-otp`, handling the user lookup, OTP issuance, and email delivery guardrails before returning the success payload.
-- `app/services/ai_service.py` orchestrates Claude (Anthropic) requests for demand forecasts, delay-risk scoring, low-stock recommendations, and journey summaries; whenever `ANTHROPIC_API_KEY` is unset the helpers fall back to deterministic baselines so the dashboards still show sensible numbers.
+- `app/services/ai_service.py` orchestrates AI requests for demand forecasts, delay-risk scoring, low-stock recommendations, and journey summaries; when no AI key is configured it falls back to deterministic baselines so the dashboards still show sensible numbers.
 - `_normalize_database_url()`, `_current_database_url()`, and `_engine()` try the configured `DATABASE_URL` first and revert to `sqlite:///./local.db` (driven by `SQLITE_DB_PATH=local.db`) if the remote store is unreachable, keeping the health check honest.
 - Utility helpers such as `normalize_email`, `normalize_role`, password hashing, and token creation stay close to the routers so you can track the auth flow end-to-end.
 
@@ -138,14 +138,17 @@ Windows PowerShell note: if you see `npm` blocked by execution policy, run `npm.
 - `SQLITE_DB_PATH` (default: `local.db`)
 - `BLOCKCHAIN_SALT` (hash salt for ledger signatures)
 - `ALLOWED_ORIGINS` / `CORS_ORIGINS` (comma-separated list; defaults to `http://localhost:5173,http://127.0.0.1:5173`)
+- `AI_PROVIDER` (optional; `auto|anthropic|gemini`; default: `auto`)
 - `ANTHROPIC_API_KEY` (for Claude-powered AI integrations; leave blank to keep the baseline forecasts and summaries)
 - `ANTHROPIC_MODEL` (optional override; default: `claude-opus-4-6`)
+- `GEMINI_API_KEY` (for Gemini-powered AI integrations; leave blank to keep the baseline forecasts and summaries)
+- `GEMINI_MODEL` (optional override; default: `gemini-2.0-flash`)
 - `UVICORN_HOST` (default: `127.0.0.1`)
 - `UVICORN_PORT` (default: `8000`)
 - `UVICORN_LOG_LEVEL` (default: `warning`)
 - `UVICORN_ACCESS_LOG` (default: `false`)
 
-Providing the `ANTHROPIC_API_KEY` enables the backend AI helpers to call Claude; when the key is missing they gracefully return the mean-based baselines defined in `app/services/ai_service.py`. If the key is invalid (HTTP `401/403`), the backend temporarily disables AI calls for ~10 minutes to avoid log spam; fix the key and restart the backend.
+Providing an AI key enables the backend AI helpers; when missing they gracefully return the mean-based baselines defined in `app/services/ai_service.py`. If the key is invalid (HTTP `401/403`), the backend temporarily disables AI calls for ~10 minutes to avoid log spam; fix the key and restart the backend.
 - `MOCK_EMAIL_DELIVERY` (default in this repo: `false`). When `true`, emails are printed to the console instead of sending. When `false`, thank-you emails and OTP emails send via SMTP; failures are logged and `/api/auth/feedback` returns `email_sent: false` + `email_error` instead of failing the request.
 - `SMTP_SERVER`, `SMTP_PORT`, `SENDER_EMAIL`, `SENDER_PASSWORD`, `SENDER_NAME`
 
@@ -170,7 +173,7 @@ If you still see `EMAIL MOCK` in the backend logs while `MOCK_EMAIL_DELIVERY=fal
 
 ### Secrets and `.env`
 
-- Put sensitive keys in `.env` (example: `ANTHROPIC_API_KEY=...`).
+- Put sensitive keys in `.env` (example: `ANTHROPIC_API_KEY=...` or `GEMINI_API_KEY=...`).
 - `.env` is ignored by git (`.gitignore` includes `.env` and `.env.*`).
 - Use `.env.example` files for safe placeholders only.
 - `.env.example` files in this repo use placeholders (never real keys). Set real values in your shell or local `backend/.env` copy so secrets never land in source control.
@@ -186,6 +189,11 @@ If you still see `EMAIL MOCK` in the backend logs while `MOCK_EMAIL_DELIVERY=fal
 3. Set backend environment variable `DATABASE_URL` to that URL (prefer `backend/.env` locally, or Render "Environment" variables when deployed).
 4. Keep `SQLITE_DB_PATH` only as local fallback.
 5. Restart the backend service. On startup, tables are auto-created via SQLAlchemy.
+
+Troubleshooting:
+- If the backend falls back to SQLite, first verify your network can reach the Render DB host on port `5432`:
+  - `Test-NetConnection <your-render-db-hostname> -Port 5432`
+  - Many office/college networks block outbound `5432`; try a mobile hotspot/VPN or deploy the backend on Render and use the Internal Database URL.
 
 For local development you can skip Postgres entirely: leave `DATABASE_URL` unset and the backend uses SQLite via `SQLITE_DB_PATH=local.db` (or copy `backend/.env.example` to `backend/.env`).
 
@@ -255,7 +263,7 @@ The feedback endpoint now stores the submission even if the thank-you email cann
 - **Working QR Scanner**: The Retail Shop scanner animates the scan with a live radar, builds a blockchain-verified badge, and renders the generated QR image so judges can literally see the product being verified in the demo.
 - **Product Journey Timeline**: That same scanner surface now features a dedicated timeline panel that walks through every blockchain stage (with tx hash, timestamp, and AI stage cues) so the entire supply chain is visible on a single screen.
 - **Live ETA Countdown**: Timeline entries carry `etaHours`, and the interface maintains a live countdown to the next delivery stage—powered by tracking telemetry and the delay-risk scorer in `tracking/ai-delay-risk`.
-- **AI Forecasting & Summaries**: `app/services/ai_service.py` feeds `/admin/ai-forecast`, `/manufacturer/ai-forecast`, `/dealer/ai-reorder-recommendations`, and the blockchain journey summaries; provide `ANTHROPIC_API_KEY` to unlock Claude-generated forecasts and journey highlights or let each helper fall back to its built-in mean-based baseline.
+- **AI Forecasting & Summaries**: `app/services/ai_service.py` feeds `/admin/ai-forecast`, `/manufacturer/ai-forecast`, `/dealer/ai-reorder-recommendations`, and the blockchain journey summaries; provide either `ANTHROPIC_API_KEY` (Claude) or `GEMINI_API_KEY` (Gemini) to unlock richer forecasts and summaries or let each helper fall back to its built-in mean-based baseline.
 
 ## Database
 
@@ -283,11 +291,11 @@ For local testing:
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Admin | admin@globalsupply.com | `admin123` |
-| Manufacturer | manufacturer@globalsupply.com | `maker123` |
-| Transporter | transporter@globalsupply.com | `transport123` |
-| Dealer | dealer@globalsupply.com | `dealer123` |
-| Retail | retail@globalsupply.com | `retail123` |
+| Admin | admin@globalsupply.com |  
+| Manufacturer | manufacturer@globalsupply.com | 
+| Transporter | transporter@globalsupply.com | 
+| Dealer | dealer@globalsupply.com | 
+| Retail | retail@globalsupply.com |
 
 ## API Modules
 
@@ -345,10 +353,10 @@ Dashboard pages and the API functions they use:
 ## AI & Live Demo Highlights
 
 ### AI-enhanced intelligence
-- **Demand forecasting:** `backend/app/services/ai_service.py::predict_demand` calls Claude (when `ANTHROPIC_API_KEY` is set) and falls back to a resilient moving-average forecast. The `admin` and `manufacturer` `/ai-forecast` routes expose these insights to the dashboards.
+- **Demand forecasting:** `backend/app/services/ai_service.py::predict_demand` calls the configured AI provider (when a key is set) and falls back to a resilient moving-average forecast. The `admin` and `manufacturer` `/ai-forecast` routes expose these insights to the dashboards.
 - **Smart reorder hints:** `/dealer/reorder-recommendations` calls `ai_service.predict_low_stock` to annotate every SKU with `priority`/`recommendation` text derived from Claude, so judges can read out high-value suggestions.
 - **Delay risk:** `/tracking/ai-delay-risk` uses the same AI service to turn distance + weather + traffic into a normalized delay probability, which feeds the transporter alerts.
-- **Enabling AI:** Populate `ANTHROPIC_API_KEY` (in `./.env` or your deployment) before demoing; otherwise the API gracefully returns the baseline numbers mentioned above.
+- **Enabling AI:** Populate `ANTHROPIC_API_KEY` or `GEMINI_API_KEY` (in `./.env` or your deployment) before demoing; otherwise the API gracefully returns the baseline numbers mentioned above.
 
 ### Showcase experiences for judges
 1. **Working QR Scanner (`frontend/src/pages/RetailShop/Scanner.jsx`):** Show the quick-scan buttons or enter codes manually, then point a webcam-phone at the booth to highlight the animated scanner, blockchain verification badge, and live QR render. The page calls `/blockchain/qr/{sku}`, `/blockchain/journey/{sku}`, and the new `/blockchain/journey-summary/{sku}` so every scan provides both visual verification and an AI-generated narrative on stage.
