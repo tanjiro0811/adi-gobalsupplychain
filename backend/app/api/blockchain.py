@@ -3,11 +3,12 @@ from __future__ import annotations
 import io
 import json
 import base64
-from typing import Optional
+from typing import Any, Optional, cast
 from urllib.parse import quote
 
-import qrcode
-from qrcode.exceptions import DataOverflowError
+import qrcode  # type: ignore[import-untyped]
+from qrcode import constants as qrcode_constants  # type: ignore[import-untyped]
+from qrcode.exceptions import DataOverflowError  # type: ignore[import-untyped]
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
@@ -143,7 +144,7 @@ def product_qr(product_sku: str, request: Request) -> dict:
     def _render_qr(data: str) -> str:
         qr = qrcode.QRCode(
             version=None,
-            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            error_correction=qrcode_constants.ERROR_CORRECT_L,
             box_size=10,
             border=4,
         )
@@ -160,7 +161,7 @@ def product_qr(product_sku: str, request: Request) -> dict:
         img = qr.make_image(fill_color="black", back_color="white")
 
         buf = io.BytesIO()
-        img.save(buf, format="PNG")
+        cast(Any, img).save(buf, format="PNG")
         b64_img = base64.b64encode(buf.getvalue()).decode("utf-8")
         return f"data:image/png;base64,{b64_img}"
 

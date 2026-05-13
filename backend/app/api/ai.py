@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+<<<<<<< HEAD
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, Depends
@@ -15,11 +16,21 @@ from app.services.ai_service import (
     forecast_with_insights,
     optimise_delivery_route,
 )
+=======
+from typing import Optional
+
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel, Field, conlist
+
+from app.core.middleware import get_current_payload
+from app.services.ai_service import ai_status, aforecast_with_insights
+>>>>>>> 2e0225834c4e9b35737288da65ee57f107aed6aa
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
 
 class ForecastRequest(BaseModel):
+<<<<<<< HEAD
     product_name: str = Field(default="Product")
     history: List[float] = Field(default_factory=list)
     horizon: int = Field(default=30, ge=1, le=365)
@@ -111,4 +122,32 @@ def shipment_anomalies(data: ShipmentAnomaliesRequest) -> dict:
         tracking_id=data.tracking_id,
         tracking_events=list(data.tracking_events or []),
         expected_delivery=str(data.expected_delivery or ""),
+=======
+    product_name: str = Field(min_length=1, max_length=120)
+    history: conlist(float, min_length=1)  # list of numeric demand history
+    horizon: int = Field(default=30, ge=1, le=365)
+    context: Optional[str] = Field(default="", max_length=2000)
+
+
+@router.get("/status")
+async def ai_status_route(_: dict = Depends(get_current_payload)) -> dict:
+    """Return current AI provider configuration status."""
+    return ai_status()
+
+
+@router.post("/forecast-with-insights")
+async def forecast_with_insights_endpoint(
+    data: ForecastRequest,
+    _: dict = Depends(get_current_payload),
+) -> dict:
+    """
+    Generate a demand forecast with narrative insights.
+    Requires authentication; works with configured AI provider or falls back to baseline forecast.
+    """
+    return await aforecast_with_insights(
+        product_name=data.product_name,
+        history=list(data.history),
+        horizon=data.horizon,
+        context=data.context or "",
+>>>>>>> 2e0225834c4e9b35737288da65ee57f107aed6aa
     )

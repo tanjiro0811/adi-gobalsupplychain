@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { authApi } from '../../api/axiosInstance'
-import './FeedbackForm.css'
+import './Feedbackform.css'
 
 /* ── Constants ─────────────────────────────────────────────────── */
 const STEPS = ['Your Info', 'Details', 'Thoughts']

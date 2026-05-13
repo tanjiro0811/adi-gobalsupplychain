@@ -1,24 +1,3 @@
-"""
-ai_service.py  —  Advanced Claude AI Service
-Global Supply Chain Management Platform
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Features
-  • Retry with exponential back-off  (529 / 500 / RateLimit)
-  • In-process LRU response cache    (TTL-aware, SHA-256 keyed)
-  • Structured JSON for every feature with schema validation
-  • Multi-turn conversation memory   (AI chatbot)
-  • Async wrappers via asyncio.to_thread
-  • Real-time streaming support      (SSE / WebSocket ready)
-  • Confidence scoring on forecasts
-  • Anomaly detection with severity tiers
-  • Supplier risk multi-dimension matrix
-  • CO2 + fuel-cost routing (INR)
-  • Blockchain provenance health scoring
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Install:  pip install anthropic
-Env var:  ANTHROPIC_API_KEY=sk-ant-...
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -29,38 +8,98 @@ import re
 import threading
 import time
 from dataclasses import dataclass
+from functools import partial
 from math import isfinite
-from statistics import mean, stdev
+from statistics import StatisticsError, mean, stdev
 from typing import Any, AsyncIterator, Iterator
 
 import httpx
 
 from app.core.config import get_settings
 
+anthropic: Any
 try:
-    import anthropic
-    from anthropic import APIConnectionError, APIStatusError, RateLimitError
+    import anthropic as _anthropic_sdk
+
+    anthropic = _anthropic_sdk
 except ImportError:
     anthropic = None
-    APIConnectionError = APIStatusError = RateLimitError = Exception
+
+APIConnectionError = getattr(anthropic, "APIConnectionError", Exception)
+APIStatusError = getattr(anthropic, "APIStatusError", Exception)
+RateLimitError = getattr(anthropic, "RateLimitError", Exception)
 
 logger = logging.getLogger(__name__)
 
-# ── Constants ─────────────────────────────────────────────────────────────────
-
-_MODEL           = "claude-opus-4-6"
-_TIMEOUT         = 10.0
-_MAX_RETRIES     = 3
-_RETRY_BASE_WAIT = 1.5
-_CACHE_TTL       = 300   # seconds
-_CACHE_MAX_SIZE  = 256
-_AUTH_DISABLE_SECONDS = 600.0  # temporarily disable AI after auth failures
+_ANTHROPIC_MODEL = "claude-opus-4-6"
+_GEMINI_MODEL = "gemini-2.0-flash"
 _ANTHROPIC_KEY_PREFIX = "sk-ant-"
 _GEMINI_KEY_PREFIX = "AIza"
+<<<<<<< HEAD
 _DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
+=======
+_TIMEOUT = 10.0
+_MAX_RETRIES = 3
+_RETRY_BASE_WAIT = 1.5
+_CACHE_TTL = 300.0
+_CACHE_MAX_SIZE = 256
+_AUTH_DISABLE_SECONDS = 600.0
+>>>>>>> 2e0225834c4e9b35737288da65ee57f107aed6aa
 
 _AUTH_LOCK = threading.Lock()
 _AUTH_DISABLED_UNTIL = 0.0
+
+
+@dataclass
+class _CacheEntry:
+    value: Any
+    expires_at: float
+
+
+class _LRUCache:
+    def __init__(self, max_size: int, ttl: float) -> None:
+        self._store: dict[str, _CacheEntry] = {}
+        self._max = max_size
+        self._ttl = ttl
+        self._lock = threading.Lock()
+
+    @staticmethod
+    def _key(prompt: str) -> str:
+        return hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+
+    def get(self, prompt: str) -> Any | None:
+        key = self._key(prompt)
+        with self._lock:
+            entry = self._store.get(key)
+            if entry is None:
+                return None
+            if time.monotonic() > entry.expires_at:
+                del self._store[key]
+                return None
+            self._store[key] = self._store.pop(key)
+            return entry.value
+
+    def set(self, prompt: str, value: Any) -> None:
+        key = self._key(prompt)
+        with self._lock:
+            if key in self._store:
+                self._store.pop(key)
+            elif len(self._store) >= self._max:
+                self._store.pop(next(iter(self._store)))
+            self._store[key] = _CacheEntry(value=value, expires_at=time.monotonic() + self._ttl)
+
+
+_cache = _LRUCache(_CACHE_MAX_SIZE, _CACHE_TTL)
+
+_PROMPTS = {
+    "forecast": "Return valid JSON with forecast, confidence, trend, seasonality_detected, summary, risk_factors, recommended_safety_stock, reorder_point.",
+    "supplier_risk": "Return valid JSON with overall_risk_score, risk_level, confidence, dimensions, red_flags, positive_indicators, recommendations, alternative_suppliers.",
+    "route": "Return valid JSON with optimised_sequence, total_distance_km, total_duration_hours, estimated_fuel_cost_inr, co2_kg, savings, risk_factors, recommendations.",
+    "inventory": "Return valid JSON with alert_level, items_at_risk, immediate_actions, weekly_actions, total_reorder_cost_inr.",
+    "anomaly": "Return valid JSON with anomaly_detected, severity, confidence, anomalies, delay_hours, eta_revised, customer_message.",
+    "blockchain": "Return valid JSON with summary, highlight, keyStage, steps, provenance_score, compliance_flags, journey_health.",
+    "dashboard": "Return valid JSON with headline, health_score, top_priority, alerts, opportunities, weekly_summary.",
+}
 
 
 def _ai_disabled() -> bool:
@@ -70,20 +109,33 @@ def _ai_disabled() -> bool:
 
 def _disable_ai_for(seconds: float, *, reason: str) -> None:
     global _AUTH_DISABLED_UNTIL
-    now = time.monotonic()
     with _AUTH_LOCK:
+        now = time.monotonic()
         if now < _AUTH_DISABLED_UNTIL:
             return
         _AUTH_DISABLED_UNTIL = now + float(seconds)
     logger.warning("ai_service: %s (disabled for %.0fs)", reason, float(seconds))
 
 
-def _current_model() -> str:
+def _current_provider() -> str:
+    provider = (getattr(get_settings(), "ai_provider", "") or "auto").strip().lower()
+    return provider or "auto"
+
+
+def _anthropic_api_key() -> str:
+    return (getattr(get_settings(), "anthropic_api_key", "") or "").strip()
+
+
+def _gemini_api_key() -> str:
     settings = get_settings()
-    candidate = (getattr(settings, "anthropic_model", "") or _MODEL).strip()
-    return candidate or _MODEL
+    direct = (getattr(settings, "gemini_api_key", "") or "").strip()
+    if direct:
+        return direct
+    fallback = _anthropic_api_key()
+    return fallback if fallback.startswith(_GEMINI_KEY_PREFIX) else ""
 
 
+<<<<<<< HEAD
 def _current_provider() -> str:
     settings = get_settings()
     candidate = (getattr(settings, "ai_provider", "") or "auto").strip().lower()
@@ -154,203 +206,71 @@ def ai_status() -> dict:
 class _CacheEntry:
     value: Any
     expires_at: float
+=======
+def _current_model() -> str:
+    model = (getattr(get_settings(), "anthropic_model", "") or _ANTHROPIC_MODEL).strip()
+    return model or _ANTHROPIC_MODEL
+>>>>>>> 2e0225834c4e9b35737288da65ee57f107aed6aa
 
 
-class _LRUCache:
-    """Thread-safe LRU cache with per-entry TTL."""
-
-    def __init__(self, max_size: int, ttl: float) -> None:
-        self._store: dict[str, _CacheEntry] = {}
-        self._max = max_size
-        self._ttl = ttl
-
-    @staticmethod
-    def _key(prompt: str) -> str:
-        return hashlib.sha256(prompt.encode()).hexdigest()
-
-    def get(self, prompt: str) -> Any | None:
-        k = self._key(prompt)
-        entry = self._store.get(k)
-        if entry is None:
-            return None
-        if time.monotonic() > entry.expires_at:
-            del self._store[k]
-            return None
-        self._store[k] = self._store.pop(k)   # bump to MRU position
-        return entry.value
-
-    def set(self, prompt: str, value: Any) -> None:
-        k = self._key(prompt)
-        if len(self._store) >= self._max:
-            self._store.pop(next(iter(self._store)))
-        self._store[k] = _CacheEntry(value=value, expires_at=time.monotonic() + self._ttl)
+def _current_gemini_model() -> str:
+    model = (getattr(get_settings(), "gemini_model", "") or _GEMINI_MODEL).strip()
+    return model or _GEMINI_MODEL
 
 
-_cache = _LRUCache(_CACHE_MAX_SIZE, _CACHE_TTL)
+def _anthropic_ready() -> bool:
+    return anthropic is not None and _anthropic_api_key().startswith(_ANTHROPIC_KEY_PREFIX)
 
 
-# ── System Prompts ────────────────────────────────────────────────────────────
-
-_PROMPTS: dict[str, str] = {
-
-"forecast": """
-You are a senior supply chain demand forecasting analyst.
-Respond ONLY in valid JSON — no preamble, no fences — with this exact schema:
-{
-  "forecast": [<number>, ...],
-  "confidence": <0.0-1.0>,
-  "trend": "increasing|decreasing|stable|volatile",
-  "seasonality_detected": <boolean>,
-  "summary": "<one sentence>",
-  "risk_factors": ["<string>", ...],
-  "recommended_safety_stock": <integer|null>,
-  "reorder_point": <integer|null>
-}
-""",
-
-"supplier_risk": """
-You are an expert supply chain risk intelligence analyst.
-Respond ONLY in valid JSON with this exact schema:
-{
-  "overall_risk_score": <1-100>,
-  "risk_level": "critical|high|medium|low",
-  "confidence": <0.0-1.0>,
-  "dimensions": {
-    "financial":    {"score": <1-100>, "finding": "<string>"},
-    "geopolitical": {"score": <1-100>, "finding": "<string>"},
-    "operational":  {"score": <1-100>, "finding": "<string>"},
-    "delivery":     {"score": <1-100>, "finding": "<string>"},
-    "esg":          {"score": <1-100>, "finding": "<string>"}
-  },
-  "red_flags":           ["<string>", ...],
-  "positive_indicators": ["<string>", ...],
-  "recommendations":     ["<string>", ...],
-  "alternative_suppliers": ["<string>", ...]
-}
-""",
-
-"route": """
-You are a logistics route optimisation expert for Indian logistics networks.
-Respond ONLY in valid JSON with this exact schema:
-{
-  "optimised_sequence": [
-    {"stop": <int>, "location": "<string>", "eta": "<HH:MM>",
-     "distance_from_prev_km": <number>, "notes": "<string>"}
-  ],
-  "total_distance_km": <number>,
-  "total_duration_hours": <number>,
-  "estimated_fuel_cost_inr": <number>,
-  "co2_kg": <number>,
-  "savings": {
-    "distance_saved_km": <number>,
-    "cost_saved_inr":    <number>,
-    "time_saved_hours":  <number>
-  },
-  "risk_factors":    ["<string>", ...],
-  "recommendations": ["<string>", ...]
-}
-""",
-
-"inventory": """
-You are an inventory management specialist.
-Respond ONLY in valid JSON with this exact schema:
-{
-  "alert_level": "critical|warning|info|ok",
-  "items_at_risk": [
-    {
-      "sku": "<string>",
-      "product_name": "<string>",
-      "current_stock": <int>,
-      "days_until_stockout": <int|null>,
-      "status": "stockout_imminent|low|overstock|healthy",
-      "reorder_qty": <int|null>,
-      "action": "<string>"
-    }
-  ],
-  "immediate_actions":     ["<string>", ...],
-  "weekly_actions":        ["<string>", ...],
-  "total_reorder_cost_inr": <number|null>
-}
-""",
-
-"anomaly": """
-You are a logistics anomaly detection specialist.
-Respond ONLY in valid JSON with this exact schema:
-{
-  "anomaly_detected": <boolean>,
-  "severity": "critical|high|medium|low|none",
-  "confidence": <0.0-1.0>,
-  "anomalies": [
-    {
-      "type": "delay|route_deviation|status_gap|data_inconsistency|delivery_failure",
-      "description": "<string>",
-      "impact": "<string>",
-      "suggested_action": "<string>"
-    }
-  ],
-  "delay_hours":      <number|null>,
-  "eta_revised":      "<ISO datetime|null>",
-  "customer_message": "<string|null>"
-}
-""",
-
-"blockchain": """
-You are a supply chain blockchain analyst.
-Respond ONLY in valid JSON with this exact schema:
-{
-  "summary":          "<one sentence>",
-  "highlight":        "<short hook for executives>",
-  "keyStage":         "<latest stage name>",
-  "steps":            <int>,
-  "provenance_score": <0-100>,
-  "compliance_flags": ["<string>", ...],
-  "journey_health":   "excellent|good|degraded|compromised"
-}
-""",
-
-"chatbot": """
-You are an intelligent supply chain assistant for the Global Supply Chain Management Platform.
-You have deep knowledge of demand forecasting, supplier management, logistics,
-inventory optimisation, and blockchain-based provenance tracking.
-
-Guidelines:
-- Be concise and actionable — avoid filler
-- Cite specific numbers from the provided context
-- Suggest platform actions the user can take
-- Format multi-step answers as numbered lists
-- Never fabricate data not present in the context
-""",
-
-"dashboard": """
-You are a supply chain executive dashboard analyst.
-Respond ONLY in valid JSON with this exact schema:
-{
-  "headline":      "<one sentence — overall chain health>",
-  "health_score":  <0-100>,
-  "top_priority":  "<single most urgent action>",
-  "alerts":        ["<string>", ...],
-  "opportunities": ["<string>", ...],
-  "weekly_summary":"<2-3 sentences>"
-}
-""",
-}
+def _gemini_ready() -> bool:
+    return bool(_gemini_api_key())
 
 
-# ── Core Claude caller: retry + cache ─────────────────────────────────────────
+def ai_configured() -> bool:
+    if _ai_disabled():
+        return False
+    provider = _current_provider()
+    if provider == "anthropic":
+        return _anthropic_ready()
+    if provider == "gemini":
+        return _gemini_ready()
+    return _anthropic_ready() or _gemini_ready()
 
-def _get_client():
-    if anthropic is None:
-        return None
 
+<<<<<<< HEAD
     key = _anthropic_api_key()
     if not key:
         return None
+=======
+def ai_status() -> dict:
+    if _ai_disabled():
+        return {"enabled": False, "provider": "none", "model": ""}
+    provider = _current_provider()
+    if provider == "anthropic":
+        return {"enabled": _anthropic_ready(), "provider": "anthropic", "model": _current_model()}
+    if provider == "gemini":
+        return {"enabled": _gemini_ready(), "provider": "gemini", "model": _current_gemini_model()}
+    if _anthropic_ready():
+        return {"enabled": True, "provider": "anthropic", "model": _current_model()}
+    if _gemini_ready():
+        return {"enabled": True, "provider": "gemini", "model": _current_gemini_model()}
+    return {"enabled": False, "provider": "none", "model": ""}
+>>>>>>> 2e0225834c4e9b35737288da65ee57f107aed6aa
 
-    # Avoid noisy auth failures when a non-Anthropic API key (e.g., Google "AIza...") is provided.
-    # Anthropic keys are typically prefixed with "sk-ant-". If the format doesn't match,
-    # treat AI as "not configured" and fall back to baselines.
-    if not key.startswith(_ANTHROPIC_KEY_PREFIX):
-        logger.debug("ai_service: ANTHROPIC_API_KEY does not look like an Anthropic key; ignoring")
+
+async def _to_thread(func, /, *args, **kwargs):
+    native = getattr(asyncio, "to_thread", None)
+    if native is not None:
+        return await native(func, *args, **kwargs)
+    loop = asyncio.get_running_loop()
+    if kwargs:
+        return await loop.run_in_executor(None, partial(func, *args, **kwargs))
+    return await loop.run_in_executor(None, func, *args)
+
+
+def _get_client(api_key: str | None = None):
+    key = str(api_key or _anthropic_api_key()).strip()
+    if anthropic is None or not key.startswith(_ANTHROPIC_KEY_PREFIX):
         return None
     try:
         return anthropic.Anthropic(api_key=key, timeout=_TIMEOUT)
@@ -362,6 +282,7 @@ def _call_gemini(
     system: str,
     user: str,
     *,
+<<<<<<< HEAD
     max_tokens: int,
 ) -> str:
     key = _gemini_api_key()
@@ -408,6 +329,47 @@ def _call_gemini(
         if isinstance(part, dict) and isinstance(part.get("text"), str) and part["text"].strip():
             texts.append(part["text"].strip())
     return "\n".join(texts).strip()
+=======
+    max_tokens: int = 1024,
+    api_key: str | None = None,
+    model: str | None = None,
+) -> str:
+    gemini_key = str(api_key or _gemini_api_key()).strip()
+    if not gemini_key:
+        return ""
+    model_name = str(model or _current_gemini_model()).strip() or _current_gemini_model()
+    payload = {
+        "contents": [{"role": "user", "parts": [{"text": f"System:\n{system}\n\nUser:\n{user}"}]}],
+        "generationConfig": {"temperature": 0.2, "maxOutputTokens": int(max_tokens)},
+    }
+    response = httpx.post(
+        f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent",
+        params={"key": gemini_key},
+        json=payload,
+        timeout=_TIMEOUT,
+    )
+    response.raise_for_status()
+    data = response.json() if response.content else {}
+    candidates = data.get("candidates") or []
+    if not candidates:
+        return ""
+    content = candidates[0].get("content") or {}
+    parts = content.get("parts") or []
+    texts = [str(part.get("text", "")).strip() for part in parts if isinstance(part, dict)]
+    return "\n".join(chunk for chunk in texts if chunk)
+
+
+def _extract_text(message: Any) -> str:
+    content = getattr(message, "content", None)
+    if not isinstance(content, list):
+        return ""
+    chunks: list[str] = []
+    for block in content:
+        text = getattr(block, "text", "")
+        if isinstance(text, str) and text.strip():
+            chunks.append(text.strip())
+    return "\n".join(chunks)
+>>>>>>> 2e0225834c4e9b35737288da65ee57f107aed6aa
 
 
 def _call(
@@ -416,7 +378,11 @@ def _call(
     *,
     max_tokens: int = 1024,
     use_cache: bool = True,
+    provider_override: str | None = None,
+    anthropic_api_key: str | None = None,
+    gemini_api_key: str | None = None,
 ) -> str:
+<<<<<<< HEAD
     """Call an LLM provider with retry + exponential back-off + LRU cache."""
     if _ai_disabled():
         return ""
@@ -424,12 +390,23 @@ def _call(
     provider = _current_provider()
     if provider not in {"auto", "anthropic", "gemini"}:
         provider = "auto"
+=======
+    if _ai_disabled():
+        return ""
+
+    provider = str(provider_override or _current_provider()).strip().lower()
+    anthropic_key = str(anthropic_api_key or _anthropic_api_key()).strip()
+    gemini_key = str(gemini_api_key or _gemini_api_key()).strip()
+    anthropic_ready = anthropic is not None and anthropic_key.startswith(_ANTHROPIC_KEY_PREFIX)
+    gemini_ready = bool(gemini_key)
+>>>>>>> 2e0225834c4e9b35737288da65ee57f107aed6aa
 
     if provider == "anthropic":
         chosen = "anthropic"
     elif provider == "gemini":
         chosen = "gemini"
     else:
+<<<<<<< HEAD
         chosen = "anthropic" if _anthropic_api_key().startswith(_ANTHROPIC_KEY_PREFIX) else "gemini"
 
     if chosen == "anthropic":
@@ -444,6 +421,22 @@ def _call(
         model = _current_gemini_model()
 
     cache_key = chosen + "|||" + model + "|||" + system + "|||" + user
+=======
+        chosen = "anthropic" if anthropic_ready else "gemini"
+
+    if chosen == "anthropic":
+        anthropic_client = _get_client(anthropic_key)
+        if anthropic_client is None:
+            return ""
+        model = _current_model()
+    else:
+        if not gemini_ready:
+            return ""
+        model = _current_gemini_model()
+
+    credential_mode = "override" if provider_override or anthropic_api_key or gemini_api_key else "settings"
+    cache_key = f"{chosen}|||{model}|||{credential_mode}|||{system}|||{user}"
+>>>>>>> 2e0225834c4e9b35737288da65ee57f107aed6aa
     if use_cache:
         cached = _cache.get(cache_key)
         if cached is not None:
@@ -453,44 +446,52 @@ def _call(
     for attempt in range(_MAX_RETRIES):
         try:
             if chosen == "anthropic":
+<<<<<<< HEAD
                 msg = client.messages.create(
+=======
+                anthropic_client = _get_client(anthropic_key)
+                if anthropic_client is None:
+                    return ""
+                response = anthropic_client.messages.create(
+>>>>>>> 2e0225834c4e9b35737288da65ee57f107aed6aa
                     model=model,
                     max_tokens=max_tokens,
                     system=system,
                     messages=[{"role": "user", "content": user}],
                 )
+<<<<<<< HEAD
                 text = _extract_text(msg)
             else:
                 text = _call_gemini(system, user, max_tokens=max_tokens)
+=======
+                text = _extract_text(response)
+            else:
+                text = _call_gemini(system, user, max_tokens=max_tokens, api_key=gemini_key, model=model)
+>>>>>>> 2e0225834c4e9b35737288da65ee57f107aed6aa
             if use_cache and text:
                 _cache.set(cache_key, text)
             return text
-
         except RateLimitError:
             wait = _RETRY_BASE_WAIT * (2 ** attempt)
-            logger.warning("ai_service: rate limited — waiting %.1fs (attempt %d)", wait, attempt + 1)
+            logger.warning("ai_service: rate limited - waiting %.1fs (attempt %d)", wait, attempt + 1)
             time.sleep(wait)
-
         except APIStatusError as exc:
-            if exc.status_code in (401, 403):
-                _disable_ai_for(
-                    _AUTH_DISABLE_SECONDS,
-                    reason=f"AI auth failed (HTTP {exc.status_code}). Check ANTHROPIC_API_KEY",
-                )
+            status_code = int(getattr(exc, "status_code", 0) or 0)
+            if status_code in (401, 403):
+                _disable_ai_for(_AUTH_DISABLE_SECONDS, reason=f"AI auth failed (HTTP {status_code})")
                 return ""
-            if exc.status_code in (500, 529) and attempt < _MAX_RETRIES - 1:
-                wait = _RETRY_BASE_WAIT * (2 ** attempt)
-                logger.warning("ai_service: server error %d — retry in %.1fs", exc.status_code, wait)
-                time.sleep(wait)
-            else:
-                logger.debug("ai_service: APIStatusError %d", exc.status_code)
+            if status_code not in (500, 529) or attempt == _MAX_RETRIES - 1:
+                logger.debug("ai_service: APIStatusError %d", status_code)
                 return ""
-
+            wait = _RETRY_BASE_WAIT * (2 ** attempt)
+            logger.warning("ai_service: server error %d - retry in %.1fs", status_code, wait)
+            time.sleep(wait)
         except APIConnectionError:
             logger.debug("ai_service: connection error (attempt %d)", attempt + 1)
             if attempt == _MAX_RETRIES - 1:
                 return ""
             time.sleep(_RETRY_BASE_WAIT)
+<<<<<<< HEAD
 
         except httpx.HTTPStatusError as exc:
             status_code = exc.response.status_code
@@ -511,26 +512,407 @@ def _call(
                 return ""
             time.sleep(_RETRY_BASE_WAIT)
 
+=======
+        except httpx.HTTPStatusError as exc:
+            status_code = exc.response.status_code
+            if status_code == 429:
+                _disable_ai_for(60.0, reason="Gemini rate limited (HTTP 429)")
+                return ""
+            if status_code not in (500, 503) or attempt == _MAX_RETRIES - 1:
+                return ""
+            wait = _RETRY_BASE_WAIT * (2 ** attempt)
+            logger.warning("ai_service: gemini server error %d - retry in %.1fs", status_code, wait)
+            time.sleep(wait)
+        except httpx.RequestError as exc:
+            logger.debug("ai_service: gemini connection error (attempt %d): %s", attempt + 1, exc)
+            if attempt == _MAX_RETRIES - 1:
+                return ""
+            time.sleep(_RETRY_BASE_WAIT)
+>>>>>>> 2e0225834c4e9b35737288da65ee57f107aed6aa
         except Exception as exc:
-            # Avoid noisy stack traces for expected "AI disabled / not configured" demo setups.
             logger.debug("ai_service: unexpected error: %s", exc, exc_info=True)
             return ""
-
     return ""
 
 
-def _call_json(system: str, user: str, *, max_tokens: int = 1024, use_cache: bool = True) -> dict | list | None:
-    text = _call(system, user, max_tokens=max_tokens, use_cache=use_cache)
+def _parse_json(text: str) -> dict | list | None:
+    content = str(text or "").strip()
+    if not content:
+        return None
+    candidates = [content]
+    fenced = re.sub(r"^```(?:json)?\s*|\s*```$", "", content, flags=re.IGNORECASE).strip()
+    if fenced != content:
+        candidates.append(fenced)
+    match = re.search(r"(\{[\s\S]*\}|\[[\s\S]*\])", content)
+    if match:
+        candidates.append(match.group(1))
+    for candidate in candidates:
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+    return None
+
+
+def _call_json(
+    system: str,
+    user: str,
+    *,
+    max_tokens: int = 1024,
+    use_cache: bool = True,
+    provider_override: str | None = None,
+    anthropic_api_key: str | None = None,
+    gemini_api_key: str | None = None,
+) -> dict | list | None:
+    text = _call(
+        system,
+        user,
+        max_tokens=max_tokens,
+        use_cache=use_cache,
+        provider_override=provider_override,
+        anthropic_api_key=anthropic_api_key,
+        gemini_api_key=gemini_api_key,
+    )
     return _parse_json(text) if text else None
 
 
-# ── Async wrappers ────────────────────────────────────────────────────────────
+def _sanitize(values: list[Any]) -> list[float]:
+    clean: list[float] = []
+    for value in values:
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            continue
+        if isfinite(number):
+            clean.append(max(0.0, round(number, 4)))
+    return clean
 
-async def _acall_json(system: str, user: str, **kw) -> dict | list | None:
-    return await asyncio.to_thread(_call_json, system, user, **kw)
+
+def _baseline(history: list[float], horizon: int) -> list[float]:
+    series = history[-120:] if history else []
+    if not series or horizon <= 0:
+        return []
+    if len(series) == 1:
+        return [round(series[0], 2) for _ in range(horizon)]
+    recent = series[-min(len(series), 7) :]
+    avg = sum(recent) / max(len(recent), 1)
+    slope = 0.0
+    if len(series) >= 2:
+        slope = (series[-1] - series[0]) / max(len(series) - 1, 1)
+    return [round(max(0.0, avg + (step * slope)), 2) for step in range(1, horizon + 1)]
 
 
-# ── Streaming ─────────────────────────────────────────────────────────────────
+def _coerce_forecast(raw: Any, horizon: int) -> list[float]:
+    if not isinstance(raw, list):
+        return []
+    forecast = [round(max(0.0, float(value)), 2) for value in raw if isinstance(value, (int, float))]
+    if not forecast:
+        return []
+    if len(forecast) < horizon:
+        forecast.extend([forecast[-1]] * (horizon - len(forecast)))
+    return forecast[:horizon]
+
+
+def _confidence_from_history(history: list[float]) -> float:
+    if len(history) < 7:
+        return 0.4
+    if len(history) < 30:
+        return 0.6
+    try:
+        avg = mean(history)
+        if avg <= 0:
+            return 0.5
+        return round(max(0.3, min(0.95, 1.0 - ((stdev(history) / avg) * 0.5))), 2)
+    except StatisticsError:
+        return 0.5
+
+
+def _trend_label(history: list[float]) -> str:
+    if len(history) < 2:
+        return "stable"
+    delta = history[-1] - history[0]
+    if delta > 0.5:
+        return "increasing"
+    if delta < -0.5:
+        return "decreasing"
+    return "stable"
+
+
+def _demand_for_item(item: dict, avg_daily_demand: dict[str, float] | None = None) -> float:
+    sku = str(item.get("sku") or item.get("productSku") or "")
+    if avg_daily_demand and sku in avg_daily_demand:
+        return max(float(avg_daily_demand[sku]), 0.0)
+    for key in ("avgDailySales", "avg_daily_sales", "dailyDemand", "daily_demand"):
+        value = item.get(key)
+        if isinstance(value, (int, float)):
+            return max(float(value), 0.0)
+    return 0.0
+
+
+def predict_demand(history: list[float], horizon: int = 3) -> list[float]:
+    clean = _sanitize(history)
+    baseline = _baseline(clean, horizon)
+    if not clean or horizon <= 0:
+        return []
+    if not ai_configured():
+        return baseline
+    result = _call_json(_PROMPTS["forecast"], json.dumps({"history": clean[-60:], "horizon": horizon}), max_tokens=600)
+    if isinstance(result, dict):
+        forecast = _coerce_forecast(result.get("forecast"), horizon)
+        if forecast:
+            return forecast
+    return baseline
+
+
+def forecast_with_insights(product_name: str, history: list[float], horizon: int = 30, context: str = "") -> dict:
+    clean = _sanitize(history)
+    baseline = _baseline(clean, horizon)
+    fallback_conf = _confidence_from_history(clean)
+    fallback: dict[str, Any] = {
+        "forecast": baseline,
+        "confidence": fallback_conf,
+        "trend": _trend_label(clean),
+        "seasonality_detected": False,
+        "summary": "Baseline forecast generated." if clean else "No demand history available.",
+        "risk_factors": [],
+        "recommended_safety_stock": int(round(max(mean(clean[-7:]) if clean else 0.0, 0.0) * 7)) if clean else None,
+        "reorder_point": int(round(max(mean(clean[-7:]) if clean else 0.0, 0.0) * 5)) if clean else None,
+    }
+    if not clean or not ai_configured():
+        return fallback
+    result = _call_json(
+        _PROMPTS["forecast"],
+        json.dumps({"product_name": product_name, "history": clean[-90:], "horizon": horizon, "context": context}),
+        max_tokens=1200,
+    )
+    if isinstance(result, dict):
+        forecast = _coerce_forecast(result.get("forecast"), horizon) or baseline
+        return {
+            "forecast": forecast,
+            "confidence": result.get("confidence", fallback_conf),
+            "trend": result.get("trend", fallback["trend"]),
+            "seasonality_detected": bool(result.get("seasonality_detected", False)),
+            "summary": result.get("summary", fallback["summary"]),
+            "risk_factors": result.get("risk_factors", []),
+            "recommended_safety_stock": result.get("recommended_safety_stock", fallback["recommended_safety_stock"]),
+            "reorder_point": result.get("reorder_point", fallback["reorder_point"]),
+        }
+    return fallback
+
+
+def analyse_supplier_risk(supplier_name: str, supplier_data: dict, news_snippets: list[str] | None = None) -> dict:
+    fallback: dict[str, Any] = {
+        "overall_risk_score": 50,
+        "risk_level": "medium",
+        "confidence": 0.0,
+        "dimensions": {name: {"score": 50, "finding": "AI unavailable"} for name in ("financial", "geopolitical", "operational", "delivery", "esg")},
+        "red_flags": [],
+        "positive_indicators": [],
+        "recommendations": ["Manual supplier review recommended."],
+        "alternative_suppliers": [],
+    }
+    if not ai_configured():
+        return fallback
+    result = _call_json(
+        _PROMPTS["supplier_risk"],
+        json.dumps({"supplier_name": supplier_name, "supplier_data": supplier_data, "news_snippets": news_snippets or []}),
+        max_tokens=1200,
+    )
+    return result if isinstance(result, dict) and "overall_risk_score" in result else fallback
+
+
+def optimise_delivery_route(warehouse: str, stops: list[dict], constraints: dict | None = None) -> dict:
+    fallback = {
+        "optimised_sequence": [
+            {"stop": index + 1, "location": stop.get("location", ""), "eta": "N/A", "distance_from_prev_km": 0, "notes": ""}
+            for index, stop in enumerate(stops)
+        ],
+        "total_distance_km": 0,
+        "total_duration_hours": 0,
+        "estimated_fuel_cost_inr": 0,
+        "co2_kg": 0,
+        "savings": {"distance_saved_km": 0, "cost_saved_inr": 0, "time_saved_hours": 0},
+        "risk_factors": [],
+        "recommendations": ["Route optimisation unavailable; using current stop order."],
+    }
+    if not ai_configured():
+        return fallback
+    result = _call_json(
+        _PROMPTS["route"],
+        json.dumps({"warehouse": warehouse, "stops": stops, "constraints": constraints or {}}),
+        max_tokens=1200,
+    )
+    return result if isinstance(result, dict) and "optimised_sequence" in result else fallback
+
+
+def predict_low_stock(inventory_data: list[dict], api_key: str = "") -> list[dict]:
+    if not inventory_data:
+        return []
+    supplied_key = str(api_key or "").strip()
+    if not (supplied_key or ai_configured()):
+        return inventory_data
+    provider_override: str | None = None
+    anthropic_override: str | None = None
+    gemini_override: str | None = None
+    if supplied_key.startswith(_ANTHROPIC_KEY_PREFIX):
+        provider_override = "anthropic"
+        anthropic_override = supplied_key
+    elif supplied_key.startswith(_GEMINI_KEY_PREFIX):
+        provider_override = "gemini"
+        gemini_override = supplied_key
+    elif supplied_key:
+        return inventory_data
+    result = _call_json(
+        _PROMPTS["inventory"],
+        json.dumps({"inventory_data": inventory_data}),
+        max_tokens=1200,
+        use_cache=False,
+        provider_override=provider_override,
+        anthropic_api_key=anthropic_override,
+        gemini_api_key=gemini_override,
+    )
+    if isinstance(result, dict) and isinstance(result.get("recommendations"), list):
+        recommendations = [item for item in result["recommendations"] if isinstance(item, dict)]
+        merged: list[dict] = []
+        for item in inventory_data:
+            sku = item.get("sku")
+            match = next((rec for rec in recommendations if rec.get("sku") == sku), {})
+            merged.append(
+                {
+                    **item,
+                    "recommendation": match.get("recommendation", item.get("recommendation", "")),
+                    "priority": match.get("priority", item.get("priority", "medium")),
+                }
+            )
+        return merged
+    return inventory_data
+
+
+def check_inventory_alerts(inventory_items: list[dict], avg_daily_demand: dict[str, float] | None = None) -> dict:
+    items_at_risk: list[dict] = []
+    for item in inventory_items:
+        current_stock = int(item.get("current_stock", item.get("currentStock", item.get("quantity", 0))) or 0)
+        demand = _demand_for_item(item, avg_daily_demand)
+        days_until_stockout = int(current_stock / demand) if demand > 0 else None
+        reorder_qty = int(round(max((demand * 7) - current_stock, 0))) if demand > 0 else None
+        if current_stock <= 0:
+            status = "stockout_imminent"
+        elif days_until_stockout is not None and days_until_stockout <= 3:
+            status = "stockout_imminent"
+        elif days_until_stockout is not None and days_until_stockout <= 7:
+            status = "low"
+        elif demand > 0 and current_stock > (demand * 30):
+            status = "overstock"
+        else:
+            status = "healthy"
+        if status != "healthy":
+            items_at_risk.append(
+                {
+                    "sku": item.get("sku", item.get("productSku", "")),
+                    "product_name": item.get("product_name", item.get("productName", item.get("name", ""))),
+                    "current_stock": current_stock,
+                    "days_until_stockout": days_until_stockout,
+                    "status": status,
+                    "reorder_qty": reorder_qty,
+                    "action": "Reorder immediately." if status == "stockout_imminent" else "Review and replenish soon." if status == "low" else "Pause replenishment and rebalance inventory.",
+                }
+            )
+    alert_level = "ok"
+    if any(item["status"] == "stockout_imminent" for item in items_at_risk):
+        alert_level = "critical"
+    elif items_at_risk:
+        alert_level = "warning"
+    fallback = {
+        "alert_level": alert_level,
+        "items_at_risk": items_at_risk,
+        "immediate_actions": ["Prioritise SKUs at risk of stockout."] if items_at_risk else [],
+        "weekly_actions": ["Review replenishment settings and supplier lead times."] if items_at_risk else [],
+        "total_reorder_cost_inr": None,
+    }
+    if not inventory_items or not ai_configured():
+        return fallback
+    result = _call_json(
+        _PROMPTS["inventory"],
+        json.dumps({"inventory_items": inventory_items, "avg_daily_demand": avg_daily_demand or {}}),
+        max_tokens=1200,
+    )
+    return result if isinstance(result, dict) and "alert_level" in result else fallback
+
+
+def predict_delay_risk(distance_km: float, weather_score: float, traffic_score: float) -> float:
+    raw = (distance_km / 1200.0) * 0.4 + weather_score * 0.3 + traffic_score * 0.3
+    return round(max(0.0, min(1.0, raw)), 3)
+
+
+def detect_shipment_anomalies(tracking_id: str, tracking_events: list[dict], expected_delivery: str) -> dict:
+    fallback = {
+        "anomaly_detected": False,
+        "severity": "none",
+        "confidence": 0.0,
+        "anomalies": [],
+        "delay_hours": None,
+        "eta_revised": None,
+        "customer_message": None,
+    }
+    if not ai_configured():
+        return fallback
+    result = _call_json(
+        _PROMPTS["anomaly"],
+        json.dumps({"tracking_id": tracking_id, "tracking_events": tracking_events, "expected_delivery": expected_delivery}),
+        max_tokens=1200,
+    )
+    return result if isinstance(result, dict) and "anomaly_detected" in result else fallback
+
+
+def summarize_product_journey(journey: list[dict]) -> dict:
+    if not journey:
+        return {
+            "summary": "Product journey data is still pending on the ledger.",
+            "highlight": "No events recorded yet.",
+            "keyStage": "pending",
+            "steps": 0,
+            "provenance_score": 0,
+            "compliance_flags": [],
+            "journey_health": "degraded",
+        }
+    first = journey[0]
+    last = journey[-1]
+    fallback: dict[str, Any] = {
+        "summary": f"Chain: {first.get('eventStage', 'start')} -> {last.get('eventStage', 'current')} ({len(journey)} hops).",
+        "highlight": f"Latest stage: {last.get('eventStage', 'current')}.",
+        "keyStage": last.get("eventStage") or "current",
+        "steps": len(journey),
+        "provenance_score": min(100, 40 + (len(journey) * 8)),
+        "compliance_flags": [],
+        "journey_health": "good" if len(journey) >= 3 else "degraded",
+    }
+    if not ai_configured():
+        return fallback
+    result = _call_json(_PROMPTS["blockchain"], json.dumps({"journey": journey[-12:]}), max_tokens=600)
+    if isinstance(result, dict) and "summary" in result:
+        result["steps"] = len(journey)
+        return result
+    return fallback
+
+
+def get_dashboard_insights(inventory_summary: dict, recent_shipments: list[dict], top_suppliers: list[dict]) -> dict:
+    fallback = {
+        "headline": "Supply chain data loaded. AI insights are unavailable.",
+        "health_score": 50,
+        "top_priority": "Review inventory and shipment exceptions.",
+        "alerts": [],
+        "opportunities": [],
+        "weekly_summary": "Dashboard is operating in fallback mode.",
+    }
+    if not ai_configured():
+        return fallback
+    result = _call_json(
+        _PROMPTS["dashboard"],
+        json.dumps({"inventory_summary": inventory_summary, "recent_shipments": recent_shipments[:10], "top_suppliers": top_suppliers[:5]}),
+        max_tokens=800,
+    )
+    return result if isinstance(result, dict) and "headline" in result else fallback
+
 
 def stream_chat_response(
     question: str,
@@ -539,7 +921,6 @@ def stream_chat_response(
     *,
     allow_data_tools: bool = False,
 ) -> Iterator[str]:
-    """Deprecated: chat streaming has been removed from this build."""
     if False:
         yield ""
     return
@@ -552,14 +933,15 @@ async def astream_chat_response(
     *,
     allow_data_tools: bool = False,
 ) -> AsyncIterator[str]:
-    """Deprecated: chat streaming has been removed from this build."""
     if False:
         yield ""
     return
 
 
-# ── Text / JSON helpers ───────────────────────────────────────────────────────
+async def _acall_json(system: str, user: str, **kwargs) -> dict | list | None:
+    return await _to_thread(_call_json, system, user, **kwargs)
 
+<<<<<<< HEAD
 def _extract_text(message: Any) -> str:
     blocks = getattr(message, "content", None)
     if not isinstance(blocks, list):
@@ -1000,21 +1382,28 @@ def get_dashboard_insights(
 
 
 # ── 9. Async versions of all heavy calls ─────────────────────────────────────
+=======
+>>>>>>> 2e0225834c4e9b35737288da65ee57f107aed6aa
 
 async def aforecast_with_insights(product_name: str, history: list[float], horizon: int = 30, context: str = "") -> dict:
-    return await asyncio.to_thread(forecast_with_insights, product_name, history, horizon, context)
+    return await _to_thread(forecast_with_insights, product_name, history, horizon, context)
+
 
 async def aanalyse_supplier_risk(name: str, data: dict, news: list[str] | None = None) -> dict:
-    return await asyncio.to_thread(analyse_supplier_risk, name, data, news)
+    return await _to_thread(analyse_supplier_risk, name, data, news)
+
 
 async def aoptimise_delivery_route(warehouse: str, stops: list[dict], constraints: dict | None = None) -> dict:
-    return await asyncio.to_thread(optimise_delivery_route, warehouse, stops, constraints)
+    return await _to_thread(optimise_delivery_route, warehouse, stops, constraints)
+
 
 async def acheck_inventory_alerts(items: list[dict], demand: dict | None = None) -> dict:
-    return await asyncio.to_thread(check_inventory_alerts, items, demand)
+    return await _to_thread(check_inventory_alerts, items, demand)
+
 
 async def adetect_shipment_anomalies(tid: str, events: list[dict], expected: str) -> dict:
-    return await asyncio.to_thread(detect_shipment_anomalies, tid, events, expected)
+    return await _to_thread(detect_shipment_anomalies, tid, events, expected)
+
 
 async def aget_dashboard_insights(inv: dict, shipments: list[dict], suppliers: list[dict]) -> dict:
-    return await asyncio.to_thread(get_dashboard_insights, inv, shipments, suppliers)
+    return await _to_thread(get_dashboard_insights, inv, shipments, suppliers)

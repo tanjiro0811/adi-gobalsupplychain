@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from passlib.context import CryptContext
+from passlib.context import CryptContext  # type: ignore[import-untyped]
 
 pwd_context = CryptContext(
     # Prefer PBKDF2 to avoid bcrypt's 72-byte password limit and Windows bcrypt backend quirks.
@@ -25,4 +25,3 @@ def verify_password(plain_password: str, stored_password_hash: str) -> bool:
         return pwd_context.verify(plain_password, stored_password_hash)
     except Exception:
         return False
-

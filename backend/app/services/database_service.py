@@ -5,7 +5,7 @@ import logging
 import math
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import (
     JSON,
@@ -212,9 +212,9 @@ def _normalize_database_url(*, prefer_sqlite: bool = False) -> str:
     raw = str(settings.database_url or "").strip()
     if not prefer_sqlite and raw:
         if raw.startswith("postgres://"):
-            raw = raw.replace("postgres://", "postgresql+psycopg2://", 1)
+            raw = raw.replace("postgres://", "postgresql+psycopg://", 1)
         elif raw.startswith("postgresql://") and "+" not in raw.split("://", 1)[0]:
-            raw = raw.replace("postgresql://", "postgresql+psycopg2://", 1)
+            raw = raw.replace("postgresql://", "postgresql+psycopg://", 1)
         elif raw.startswith("postgresql://") or raw.startswith("postgresql+"):
             raw = raw
         else:
@@ -292,7 +292,7 @@ def _engine() -> Engine:
         _ACTIVE_DATABASE_URL = primary_url
         _ENGINE = primary_engine
         return _ENGINE
-    except SQLAlchemyError as primary_exc:
+    except Exception as primary_exc:
         logger.warning("Primary database %s failed, falling back to SQLite: %s", primary_display, primary_exc)
         fallback_url = _normalize_database_url(prefer_sqlite=True)
         try:
@@ -306,7 +306,7 @@ def _engine() -> Engine:
             _ACTIVE_DATABASE_URL = fallback_url
             _ENGINE = fallback_engine
             return _ENGINE
-        except SQLAlchemyError as fallback_exc:
+        except Exception as fallback_exc:
             raise DatabaseError("Unable to initialize database engine") from fallback_exc
 
 
@@ -336,6 +336,16 @@ def _row_to_dict(row: Any) -> dict:
             except json.JSONDecodeError:
                 data[key] = {}
     return data
+
+
+def _inserted_id(result: Any, *, message: str) -> int:
+    primary_key = getattr(result, "inserted_primary_key", None)
+    if not primary_key:
+        raise DatabaseError(message)
+    value = primary_key[0]
+    if value is None:
+        raise DatabaseError(message)
+    return int(value)
 
 
 def _stage_title(stage: str) -> str:
@@ -648,7 +658,7 @@ def create_user(name: str, email: str, password_hash: str, role: str) -> dict:
                     created_at=created_at,
                 )
             )
-            user_id = int(result.inserted_primary_key[0])
+            user_id = _inserted_id(result, message="Failed to determine created user id")
     except IntegrityError as exc:
         raise DatabaseConflictError("User email already exists") from exc
     except SQLAlchemyError as exc:
@@ -756,7 +766,7 @@ def create_guest_entry(
                     created_at=created_at,
                 )
             )
-            entry_id = int(result.inserted_primary_key[0])
+            entry_id = _inserted_id(result, message="Failed to determine created guest entry id")
     except SQLAlchemyError as exc:
         raise DatabaseError("Failed to store guest entry") from exc
 
@@ -838,7 +848,7 @@ def create_product(*, sku: str, name: str, quantity: int, price: float) -> dict:
                     created_at=created_at,
                 )
             )
-            product_id = int(result.inserted_primary_key[0])
+            product_id = _inserted_id(result, message="Failed to determine created product id")
     except IntegrityError as exc:
         raise DatabaseConflictError("SKU already exists") from exc
     except SQLAlchemyError as exc:
@@ -1134,6 +1144,7 @@ def list_shipments(skip: int = 0, limit: int = 100) -> dict[str, dict]:
             mapped: dict[str, dict] = {}
             for row in rows:
                 item = _row_to_dict(row)
+                timestamp_value = item.get("timestamp")
                 mapped[item["shipment_id"]] = {
                     "lat": item.get("lat"),
                     "lng": item.get("lng"),
@@ -1145,9 +1156,9 @@ def list_shipments(skip: int = 0, limit: int = 100) -> dict[str, dict]:
                     "vehicleNumber": item.get("vehicle_number"),
                     "assignmentStatus": item.get("assignment_status") or "Assigned",
                     "timestamp": (
-                        item.get("timestamp").isoformat()
-                        if isinstance(item.get("timestamp"), datetime)
-                        else str(item.get("timestamp") or "")
+                        timestamp_value.isoformat()
+                        if isinstance(timestamp_value, datetime)
+                        else str(timestamp_value or "")
                     ),
                 }
             return mapped
@@ -1351,7 +1362,7 @@ def record_shipment_event(
                     created_at=created_at,
                 )
             )
-            event_id = int(result.inserted_primary_key[0])
+            event_id = _inserted_id(result, message="Failed to determine created shipment event id")
             row = conn.execute(
                 select(shipment_events_table).where(shipment_events_table.c.id == event_id)
             ).first()
@@ -1409,7 +1420,7 @@ def record_sale(*, sku: str, units_sold: int, sale_amount: float, retailer_name:
                     sold_at=timestamp,
                 )
             )
-            sale_id = int(result.inserted_primary_key[0])
+            sale_id = _inserted_id(result, message="Failed to determine created sale id")
             row = conn.execute(select(sales_history_table).where(sales_history_table.c.id == sale_id)).first()
             return _row_to_dict(row)
     except SQLAlchemyError as exc:
@@ -1451,11 +1462,10 @@ def get_sales_analytics(period: str = "week") -> dict:
     for row in sales_rows:
         item = _row_to_dict(row)
         sold_at = item.get("sold_at")
-        day_label = (
-            sold_at.strftime("%a") if normalized != "month" else f"D{int(sold_at.strftime('%d'))}"
-            if isinstance(sold_at, datetime)
-            else "D1"
-        )
+        if isinstance(sold_at, datetime):
+            day_label = sold_at.strftime("%a") if normalized != "month" else f"D{int(sold_at.strftime('%d'))}"
+        else:
+            day_label = "D1"
         totals_by_day[day_label] = totals_by_day.get(day_label, 0.0) + float(item.get("sale_amount") or 0.0)
         sku = str(item.get("sku") or "")
         units_by_sku[sku] = units_by_sku.get(sku, 0) + int(item.get("units_sold") or 0)
@@ -1482,14 +1492,19 @@ def get_sales_analytics(period: str = "week") -> dict:
     ][:5]
 
     recent_transactions = []
-    for row in sorted([_row_to_dict(r) for r in sales_rows], key=lambda item: item.get("sold_at"), reverse=True)[:8]:
-        sold_at = row.get("sold_at")
+    recent_sales_rows = sorted(
+        [_row_to_dict(r) for r in sales_rows],
+        key=lambda item: item.get("sold_at") or datetime.min.replace(tzinfo=timezone.utc),
+        reverse=True,
+    )[:8]
+    for row_data in recent_sales_rows:
+        sold_at = row_data.get("sold_at")
         recent_transactions.append(
             {
-                "id": f"TXN-{row.get('id')}",
+                "id": f"TXN-{row_data.get('id')}",
                 "time": sold_at.strftime("%H:%M") if isinstance(sold_at, datetime) else "--:--",
-                "items": int(row.get("units_sold") or 0),
-                "amount": format_inr(float(row.get("sale_amount") or 0.0), decimals=2),
+                "items": int(row_data.get("units_sold") or 0),
+                "amount": format_inr(float(row_data.get("sale_amount") or 0.0), decimals=2),
                 "payment": "Card",
                 "status": "Completed",
             }
@@ -1582,7 +1597,7 @@ def create_notification(
                     created_at=created_at,
                 )
             )
-            notification_id = int(result.inserted_primary_key[0])
+            notification_id = _inserted_id(result, message="Failed to determine created notification id")
             row = conn.execute(
                 select(notifications_table).where(notifications_table.c.id == notification_id)
             ).first()
@@ -1626,8 +1641,10 @@ def summarize_global_metrics() -> dict:
 
 def build_admin_blockchain_transactions() -> dict:
     records = list_ledger_records(limit=500)
-    transactions = [
-        {
+    transactions = []
+    for idx, item in enumerate(records, start=1):
+        created_at = item.get("created_at")
+        transactions.append({
             "id": idx,
             "transactionHash": item.get("tx_hash"),
             "productBatch": item.get("batch_id"),
@@ -1636,25 +1653,24 @@ def build_admin_blockchain_transactions() -> dict:
             "blockNumber": 18234000 + idx,
             "gasFee": 38 + (idx % 10),
             "timestamp": (
-                item.get("created_at").isoformat()
-                if isinstance(item.get("created_at"), datetime)
-                else str(item.get("created_at") or "")
+                created_at.isoformat()
+                if isinstance(created_at, datetime)
+                else str(created_at or "")
             ),
             "productDetails": {
                 "productId": item.get("product_id"),
                 "eventStage": item.get("event_stage"),
                 "payload": item.get("payload") or {},
             },
-        }
-        for idx, item in enumerate(records, start=1)
-    ]
+        })
     total = len(transactions)
+    gas_fees = [cast(float, item["gasFee"]) for item in transactions]
     return {
         "transactions": transactions,
         "stats": {
             "totalVerifications": total,
             "successRate": 100.0 if total else 0.0,
-            "avgGasFee": round(sum(float(item["gasFee"]) for item in transactions) / max(total, 1), 2),
+            "avgGasFee": round(sum(gas_fees) / max(total, 1), 2),
             "pendingTransactions": 0,
         },
     }

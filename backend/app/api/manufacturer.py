@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import cast
 from typing import Optional
 from uuid import uuid4
 
@@ -391,8 +392,10 @@ def analytics() -> dict:
         {"label": "Diagnostics", "value": category_totals["Diagnostics"]},
     ]
 
-    avg_efficiency = round(sum(item["value"] for item in efficiency_trend) / len(efficiency_trend), 1)
-    avg_defect_rate = round(sum(item["value"] for item in defect_trend) / len(defect_trend), 2)
+    efficiency_values = [cast(float, item["value"]) for item in efficiency_trend]
+    defect_values = [cast(float, item["value"]) for item in defect_trend]
+    avg_efficiency = round(sum(efficiency_values) / len(efficiency_values), 1)
+    avg_defect_rate = round(sum(defect_values) / len(defect_values), 2)
 
     return {
         "forecastSeries": forecast_series,

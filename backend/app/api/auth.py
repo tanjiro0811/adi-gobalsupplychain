@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-import base64
-import hashlib
-import hmac
 import logging
 import os
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from jose import jwt
+from jose import JWTError, jwt  # type: ignore[import-untyped]
 from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
@@ -391,7 +388,7 @@ def refresh_token(data: RefreshTokenRequest):
         role = normalize_role(role_str)
         new_access_token = create_access_token(subject=email, role=role)
         return {"access_token": new_access_token, "token_type": "bearer"}
-    except jwt.JWTError:
+    except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token",
@@ -465,12 +462,16 @@ def validate_token(
 
 @router.post("/guest-entry")
 def save_guest_entry(data: GuestEntryRequest) -> dict:
+    normalized_email = normalize_email(data.email)
+    clean_name = normalize_display_name(data.name, fallback="Guest User")
+    company = data.company.strip()
+    phone = data.phone.strip()
     try:
         entry = create_guest_entry(
-            name=data.name.strip(),
-            email=normalize_email(data.email),
-            company=data.company.strip(),
-            phone=data.phone.strip(),
+            name=clean_name,
+            email=normalized_email,
+            company=company,
+            phone=phone,
             role=data.role.value,
             source=data.source.strip(),
         )
@@ -479,12 +480,29 @@ def save_guest_entry(data: GuestEntryRequest) -> dict:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database temporarily unavailable",
         ) from exc
-    return {
+
+    email_sent = email_service.send_guest_account_email(
+        to_email=normalized_email,
+        name=clean_name,
+        company=company,
+        phone=phone,
+    )
+
+    response = {
         "success": True,
-        "message": "Guest form data stored",
+        "message": "Guest account created successfully",
         "entry_id": entry["id"],
         "created_at": entry["created_at"],
+        "email_sent": bool(email_sent),
     }
+    if not email_sent:
+        delivery_reason = getattr(email_service, "last_error_message", "").strip()
+        response["email_error"] = (
+            "Guest account was created, but the confirmation email could not be delivered."
+        )
+        if delivery_reason:
+            response["email_error"] = f"{response['email_error']} {delivery_reason}"
+    return response
 
 
 @router.post("/feedback")

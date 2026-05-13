@@ -168,8 +168,9 @@ def create_sale(data: SaleCreateRequest) -> dict:
             payload=payload,
         )
         if related_order:
+            related_order_code = str(related_order.get("order_code") or data.order_code or "")
             update_order_stage(
-                data.order_code,
+                related_order_code,
                 stage="sold",
                 status="sold",
             )

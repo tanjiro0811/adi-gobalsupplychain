@@ -1,15 +1,62 @@
 import { getAuthState, logout } from '../store/useAuthStore'
 import { normalizeCurrencyString } from '../utils/currency'
 
+// FastAPI routes are mounted under /api, so production base URLs should keep that suffix.
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/+$/, '')
 const ENABLE_DEMO_FALLBACK = String(import.meta.env.VITE_ENABLE_DEMO_FALLBACK || '').toLowerCase() === 'true'
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1'])
+let runtimeApiBaseUrl = API_BASE_URL
 
-function buildUrl(path) {
+function isLocalhostPage() {
+  return typeof window !== 'undefined' && LOCAL_HOSTS.has(window.location.hostname)
+}
+
+function getLocalApiBaseUrl() {
+  const explicitLocalBase = String(import.meta.env.VITE_LOCAL_API_BASE_URL || '').trim().replace(/\/+$/, '')
+  if (explicitLocalBase) {
+    return explicitLocalBase
+  }
+
+  const backendTarget = String(import.meta.env.VITE_DEV_PROXY_TARGET || 'http://127.0.0.1:8000')
+    .trim()
+    .replace(/\/+$/, '')
+    .replace(/\/api$/, '')
+
+  return `${backendTarget}/api`
+}
+
+function getLocalFallbackBaseUrl(path) {
+  if (path.startsWith('http://') || path.startsWith('https://')) {
+    return ''
+  }
+  if (!isLocalhostPage() || !runtimeApiBaseUrl.startsWith('http')) {
+    return ''
+  }
+  const localBase = getLocalApiBaseUrl()
+  if (!localBase || localBase === runtimeApiBaseUrl) {
+    return ''
+  }
+  return localBase
+}
+
+function buildUrl(path, baseUrl = runtimeApiBaseUrl) {
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return path
   }
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
-  return `${API_BASE_URL}${normalizedPath}`
+  return `${baseUrl}${normalizedPath}`
+}
+
+function shouldRetryWithLocalBackend(response, rawBody = '', contentType = '') {
+  if (!response || response.ok) {
+    return false
+  }
+
+  if ([502, 503, 504].includes(response.status)) {
+    return true
+  }
+
+  return response.status >= 500 && looksLikeProxyConnectionFailure(rawBody, contentType)
 }
 
 async function safeReadText(response) {
@@ -140,7 +187,10 @@ async function request(path, { method = 'GET', data, headers = {}, responseType 
   }
 
   const requestUrl = buildUrl(path)
+  const fallbackBaseUrl = getLocalFallbackBaseUrl(path)
+  const fallbackUrl = fallbackBaseUrl ? buildUrl(path, fallbackBaseUrl) : ''
   let response
+  let fallbackTried = false
   try {
     response = await fetch(requestUrl, {
       method,
@@ -151,10 +201,29 @@ async function request(path, { method = 'GET', data, headers = {}, responseType 
     if (error?.name === 'AbortError') {
       throw error
     }
-    const connectionHint = API_BASE_URL.startsWith('http')
-      ? API_BASE_URL
-      : `backend via ${API_BASE_URL} (dev proxy)`
-    throw new Error(`Cannot reach server (${connectionHint}). Make sure backend is running.`)
+    if (fallbackUrl) {
+      try {
+        fallbackTried = true
+        response = await fetch(fallbackUrl, {
+          method,
+          headers: requestHeaders,
+          body: data !== undefined ? JSON.stringify(data) : undefined,
+        })
+        runtimeApiBaseUrl = fallbackBaseUrl
+      } catch (fallbackError) {
+        if (fallbackError?.name === 'AbortError') {
+          throw fallbackError
+        }
+      }
+    }
+    if (response) {
+      // Continue into the standard non-OK handling below.
+    } else {
+      const connectionHint = runtimeApiBaseUrl.startsWith('http')
+        ? runtimeApiBaseUrl
+        : `backend via ${runtimeApiBaseUrl} (dev proxy)`
+      throw new Error(`Cannot reach server (${connectionHint}). Make sure backend is running.`)
+    }
   }
 
   if (response.status === 401) {
@@ -167,13 +236,64 @@ async function request(path, { method = 'GET', data, headers = {}, responseType 
 
   if (!response.ok) {
     let message = DEFAULT_STATUS_MESSAGES[response.status] || `Request failed with status ${response.status}`
-    const rawBody = await safeReadText(response)
+    let rawBody = await safeReadText(response)
+    let contentType = response.headers.get('content-type') || ''
+
+    if (!fallbackTried && fallbackUrl && shouldRetryWithLocalBackend(response, rawBody, contentType)) {
+      try {
+        const fallbackResponse = await fetch(fallbackUrl, {
+          method,
+          headers: requestHeaders,
+          body: data !== undefined ? JSON.stringify(data) : undefined,
+        })
+        fallbackTried = true
+        if (fallbackResponse.ok) {
+          runtimeApiBaseUrl = fallbackBaseUrl
+          response = fallbackResponse
+          rawBody = await safeReadText(response)
+          contentType = response.headers.get('content-type') || ''
+        } else {
+          response = fallbackResponse
+          rawBody = await safeReadText(response)
+          contentType = response.headers.get('content-type') || ''
+          runtimeApiBaseUrl = fallbackBaseUrl
+        }
+      } catch (fallbackError) {
+        if (fallbackError?.name === 'AbortError') {
+          throw fallbackError
+        }
+      }
+    }
+
+    if (response.ok) {
+      if (responseType === 'blob') {
+        return response.blob()
+      }
+
+      if (responseType === 'text') {
+        return rawBody || safeReadText(response)
+      }
+
+      if (response.status === 204) {
+        return null
+      }
+
+      if (contentType.includes('application/json')) {
+        const payload = tryParseJson(rawBody)
+        if (payload !== null) {
+          return normalizeCurrencyPayload(payload)
+        }
+        return rawBody || null
+      }
+
+      return rawBody || safeReadText(response)
+    }
+
     if (rawBody) {
-      const contentType = response.headers.get('content-type') || ''
       if (response.status >= 500 && looksLikeProxyConnectionFailure(rawBody, contentType)) {
-        const connectionHint = API_BASE_URL.startsWith('http')
-          ? API_BASE_URL
-          : `backend via ${API_BASE_URL} (dev proxy)`
+        const connectionHint = runtimeApiBaseUrl.startsWith('http')
+          ? runtimeApiBaseUrl
+          : `backend via ${runtimeApiBaseUrl} (dev proxy)`
         message = `Cannot reach server (${connectionHint}). Make sure backend is running.`
       } else if (contentType.includes('application/json')) {
         const payload = tryParseJson(rawBody)

@@ -26,6 +26,7 @@ err.log
 !.env.example
 .env.local
 .env.production
+!frontend/.env.production
 
 # Frontend
 node_modules/

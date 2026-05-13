@@ -126,41 +126,32 @@ function AlertsDrawer({ open, items = [], onClose }) {
           )}
 
           {!!selectedItem && (
-            <div className="card" style={{ marginTop: 16 }}>
+            <div className="card alerts-detail-card" style={{ marginTop: 16 }}>
               <div className="alerts-box-head">
-                <strong className="alerts-box-title">What happened</strong>
-                <span className={`alerts-chip alerts-chip--${selectedItem.severity || 'info'}`}>
-                  {String(selectedItem.severity || 'info').toUpperCase()}
-                </span>
+                <div className="alerts-section-heading">
+                  <span className="alerts-section-icon" aria-hidden="true">i</span>
+                  <strong className="alerts-box-title">Information</strong>
+                </div>
               </div>
-              <div style={{ marginTop: 12 }}>
-                <div style={{ fontWeight: 700, marginBottom: 6 }}>{selectedItem.title}</div>
-                <div className="alerts-box-message">
+              <div className="alerts-detail-hero">
+                <div className="alerts-detail-kicker muted">Selected update</div>
+                <div className="alerts-detail-title">{selectedItem.title}</div>
+                <div className="alerts-detail-message">
                   {selectedItem.message || 'No extra message details were provided for this alert.'}
                 </div>
-                <div className="alerts-box-meta muted" style={{ marginTop: 8 }}>
+                <div className="alerts-box-meta muted" style={{ marginTop: 10 }}>
                   {formatNotificationTimestamp(selectedItem.timestamp)}
                 </div>
               </div>
 
               {!!detailEntries.length && (
                 <div style={{ marginTop: 14 }}>
-                  <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>Alert details</div>
-                  <div style={{ display: 'grid', gap: 8 }}>
+                  <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>Related details</div>
+                  <div className="alerts-detail-grid">
                     {detailEntries.map(([key, value]) => (
-                      <div
-                        key={key}
-                        style={{
-                          display: 'grid',
-                          gridTemplateColumns: 'minmax(110px, 140px) 1fr',
-                          gap: 10,
-                          padding: '8px 10px',
-                          borderRadius: 10,
-                          background: 'rgba(148, 163, 184, 0.08)',
-                        }}
-                      >
-                        <strong style={{ textTransform: 'capitalize' }}>{key.replace(/_/g, ' ')}</strong>
-                        <span>{formatMetadataValue(value)}</span>
+                      <div key={key} className="alerts-detail-row">
+                        <strong className="alerts-detail-key">{key.replace(/_/g, ' ')}</strong>
+                        <span className="alerts-detail-value">{formatMetadataValue(value)}</span>
                       </div>
                     ))}
                   </div>

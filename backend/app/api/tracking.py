@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -17,7 +17,6 @@ from app.services.database_service import (
     create_or_update_shipment,
     get_order,
     list_shipments,
-    record_shipment_event,
     update_order_stage,
     update_shipment_location,
 )
@@ -71,7 +70,7 @@ def _status_text(value: object) -> str:
     return str(value or "unknown").replace("_", " ").strip().lower()
 
 
-def _as_float(value: object) -> Optional[float]:
+def _as_float(value: Any) -> Optional[float]:
     try:
         parsed = float(value)
     except (TypeError, ValueError):

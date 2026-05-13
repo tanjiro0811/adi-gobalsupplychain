@@ -221,13 +221,23 @@ function Scanner({ products = [] }) {
         aiStage: '',
       })
 
-      Promise.all([
+      Promise.allSettled([
         blockchainApi.qr(baseProduct.sku),
         blockchainApi.journey(baseProduct.sku),
         blockchainApi.journeySummary(baseProduct.sku),
       ])
-        .then(([qrPayload, journeyPayload, summaryPayload]) => {
+        .then(([qrResult, journeyResult, summaryResult]) => {
+          const qrPayload = qrResult.status === 'fulfilled' ? qrResult.value : null
+          const journeyPayload = journeyResult.status === 'fulfilled' ? journeyResult.value : null
+          const summaryPayload = summaryResult.status === 'fulfilled' ? summaryResult.value : null
           const resolvedJourney = Array.isArray(journeyPayload?.journey) ? journeyPayload.journey : []
+          const hasQr = Boolean(qrPayload?.qrImageUrl)
+          const hasJourney = resolvedJourney.length > 0
+          const hasAnyBlockchainData = hasQr || hasJourney
+          const partialFailure =
+            qrResult.status === 'rejected' ||
+            journeyResult.status === 'rejected' ||
+            summaryResult.status === 'rejected'
           const resolvedAt = Date.now()
           setEtaAnchorTime(resolvedAt)
           setEtaClock(resolvedAt)
@@ -239,8 +249,14 @@ function Scanner({ products = [] }) {
             aiSummary: summaryPayload?.summary?.summary || '',
             aiHighlight: summaryPayload?.summary?.highlight || '',
             aiStage: summaryPayload?.summary?.keyStage || '',
-            error: resolvedJourney.length === 0 && !qrPayload?.qrImageUrl,
-            message: resolvedJourney.length === 0 ? 'No blockchain journey found for this code yet.' : '',
+            error: !hasAnyBlockchainData,
+            message: !hasAnyBlockchainData
+              ? 'Failed to load blockchain data for this code.'
+              : partialFailure
+                ? 'Partial blockchain data loaded. Some AI details are temporarily unavailable.'
+                : resolvedJourney.length === 0
+                  ? 'No blockchain journey found for this code yet.'
+                  : '',
           }))
         })
         .catch(() => {
